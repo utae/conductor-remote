@@ -6,8 +6,9 @@ import { useClearChatNotification } from '../../hooks/push.ts'
 import { useDiff, useFileDiff, useWorkspaceFiles } from '../../hooks/review.ts'
 import { useSendPrompt } from '../../hooks/send.ts'
 import { useWorkspaceCommands } from '../../hooks/workspace-commands.ts'
-import { useAnyWorkspace, useSessions, useWorkspaces } from '../../hooks/workspaces.ts'
+import { useAnyWorkspace, useConnection, useSessions, useWorkspaces } from '../../hooks/workspaces.ts'
 import { ApiError, client } from '../../lib/api.ts'
+import { connectionNotice } from '../../lib/connection.ts'
 import type { DiffFileScope } from '../../lib/diff.ts'
 import { buildResolver, MentionResolverProvider } from '../../lib/fileMentions.ts'
 import { shortModel, timestampMs, workspaceStatus, workspaceTitle } from '../../lib/format.ts'
@@ -33,7 +34,7 @@ import { ClosedTabsSheet } from './ClosedTabsSheet.tsx'
 import { Composer } from './Composer.tsx'
 import { type ChatHistoryRetry, handoffChat, joinChatHistory, sendHandoffDraft } from './chat-handoff.ts'
 import { DiffButton, DiffPanel, MobileDiffNavigator } from './DiffPanel.tsx'
-import { SubagentReplyNotice } from './SessionNotices.tsx'
+import { ConnectionStrip, SubagentReplyNotice } from './SessionNotices.tsx'
 import { SessionTabs, TabCloseNotice } from './SessionTabs.tsx'
 import { delegationPipelinesForSession, workflowForActiveSession } from './selection.ts'
 
@@ -106,6 +107,10 @@ export function SessionView() {
 	const readMarks = useApp(s => s.readMarks)
 	const markRead = useApp(s => s.markRead)
 	const online = useApp(s => s.online)
+	// Only a live workspace on a reachable relay has a Mac worth asking about; cached data from before
+	// the relay went away must not keep a stale warning on screen, so it is hidden when offline.
+	const { data: connection } = useConnection(!!liveWorkspace && online)
+	const macNotice = online ? connectionNotice(connection) : null
 	const showFolders = useApp(s => s.view.showFolders)
 	const setView = useApp(s => s.setView)
 
@@ -660,6 +665,7 @@ export function SessionView() {
 					{/* A native child is only a transcript slice, never a promptable Conductor
 					    session. Keep the parent composer out of that view so a reply cannot look
 					    like it is being sent to the child. */}
+					<ConnectionStrip notice={macNotice} />
 					{pickedSubagent ? (
 						<SubagentReplyNotice title={activeSession?.title} onReturn={() => pickSubagent(null)} />
 					) : (

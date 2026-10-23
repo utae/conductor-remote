@@ -16,6 +16,7 @@ import type {
 	ClosedSessionsResponse,
 	ConfirmUiStableRequest,
 	ConfirmUiStableResponse,
+	ConnectionResponse,
 	ContextBreakdownResponse,
 	ContinueWorkspaceResult,
 	CreateWorkspaceRequest,
@@ -233,6 +234,8 @@ export const client = {
 			body: JSON.stringify(config)
 		}),
 	state: () => api<StateResponse>(routes.state.path()),
+	/** Why a send would or would not land right now: the Mac's lock, Conductor's process and window. */
+	connection: () => api<ConnectionResponse>(routes.connection.path()),
 	/** Mint a short-lived native-call URI using the same bearer this PWA already holds. */
 	voiceTicket: () => api<VoiceTicketResponse>(routes.voiceTicket.path(), { method: routes.voiceTicket.method }),
 	/** Negotiate an app-wide Realtime call without sending the permanent key to the browser. */

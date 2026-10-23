@@ -66,6 +66,16 @@ export const routes = {
 	state: flat('GET', '/api/state'),
 	/** Read-only relay / Conductor / send-ready diagnosis; touches no window. */
 	connection: flat('GET', '/api/connection'),
+	/**
+	 * Trade a one-time pairing code for a device token. The one `/api` route that answers
+	 * without a credential — the caller has none yet — so it is matched before the auth gate
+	 * and rate-limited by failure (src/http/router.ts).
+	 */
+	pairDevice: flat('POST', '/api/devices/pair'),
+	/** Admin only (the shared token): mint a pairing code, list devices, revoke one. */
+	createPairingCode: flat('POST', '/api/devices/pairing-code'),
+	devices: flat('GET', '/api/devices'),
+	revokeDevice: param('DELETE', '/api/devices/:deviceId'),
 	search: flat('GET', '/api/search'),
 	repos: flat('GET', '/api/repos'),
 	/** Picker labels the relay has previously read from Conductor, grouped by harness. */

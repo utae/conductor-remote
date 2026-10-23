@@ -1,10 +1,13 @@
 import http from 'node:http'
 
+import { deviceMay } from '../auth/devices.ts'
 import { InputError } from '../contracts/validation.ts'
+import { isRoute, routes } from '../routes.ts'
 import { UiBusyError, uiQueueDepth, withUiPriority } from '../writes/ui-lock.ts'
 import { NOT_HANDLED } from './router-types.ts'
 import { createAutoModelRoutes } from './routes/auto-model.ts'
 import { createCreateWorkspaceRoutes } from './routes/create-workspace.ts'
+import { createDevicesRoutes } from './routes/devices.ts'
 import { createFilesRoutes } from './routes/files.ts'
 import { createPromptsRoutes } from './routes/prompts.ts'
 import { createSessionsRoutes } from './routes/sessions.ts'
@@ -16,8 +19,10 @@ import { createWorkspacesRoutes } from './routes/workspaces.ts'
 import type { RelayServices } from './services.ts'
 
 export function createRelayServer(services: RelayServices) {
-	const { handleMcpHttp, serveStatic, authed, json, PayloadTooLargeError, workflowHttpError } = services
+	const { handleMcpHttp, serveStatic, authenticate, pairDevice, json, PayloadTooLargeError, workflowHttpError } =
+		services
 	const handlers = [
+		createDevicesRoutes(services),
 		createAutoModelRoutes(services),
 		createStateRoutes(services),
 		createWorkflowsRoutes(services),
@@ -46,8 +51,16 @@ export function createRelayServer(services: RelayServices) {
 
 		if (!pathname.startsWith('/api/')) return serveStatic(req, res, pathname)
 
-		// Everything under /api requires the shared secret.
-		if (!authed(req)) return json(req, res, 401, { error: 'unauthorized' })
+		// The one route that answers without a credential: the caller is trading a pairing code for one.
+		if (isRoute(routes.pairDevice, req.method, pathname)) return pairDevice(req, res)
+
+		// Everything else under /api requires the shared secret or a paired device's token, and a
+		// device is held to its scope — an allowlist, so a route added later starts out closed to it.
+		const principal = authenticate(req)
+		if (!principal) return json(req, res, 401, { error: 'unauthorized' })
+		if (principal.kind === 'device' && !deviceMay(principal.device.scope, req.method, pathname)) {
+			return json(req, res, 403, { error: 'this device is not allowed to do that' })
+		}
 
 		// Who is asking decides who waits for Conductor's window. An agent (src/mcp.ts sets
 		// this header) yields the UI lock to the person holding the phone — see src/writes/ui-lock.ts ▸

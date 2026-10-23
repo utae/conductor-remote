@@ -1,6 +1,7 @@
 import { freezeAutoModelConfig } from '../../agents/auto-model/config.ts'
 import { hasAgentSettings, sendPromptSchema } from '../../contracts/agent-inputs.ts'
 import { parseInput } from '../../contracts/validation.ts'
+import { formatSendAudit } from '../../delivery/send-audit.ts'
 import { attachmentPrompt, writeAttachment } from '../../files/attachments.ts'
 import {
 	discardStagedAttachment,
@@ -44,6 +45,7 @@ export function createPromptsRoutes(
 		| 'createWorkspaceAndRead'
 		| 'sleep'
 		| 'openChat'
+		| 'principalOf'
 	> &
 		Partial<Pick<RelayServices, 'autoModels' | 'autoModelConfig' | 'inspectAutoTarget'>>
 ): RouteHandler {
@@ -70,7 +72,8 @@ export function createPromptsRoutes(
 		deliverPrompt,
 		createWorkspaceAndRead,
 		sleep,
-		openChat
+		openChat,
+		principalOf
 	} = services
 	return async (req, res, url) => {
 		const { pathname } = url
@@ -182,7 +185,9 @@ export function createPromptsRoutes(
 			// to Conductor* sits inside, so an answer the phone never heard is replayed
 			// rather than re-performed — including the parked branches, since parking the
 			// same intent twice queues the same prompt twice for the unlock.
-			if (body.clientId && sendOnce.recall(body.clientId)) {
+			const startedAt = Date.now()
+			const replay = Boolean(body.clientId && sendOnce.recall(body.clientId))
+			if (replay) {
 				console.info(`[relay] send to ${ws.branch ?? ws.id} already delivered for this tap — answering, not resending`)
 			}
 			const answer = await sendOnce.run(body.clientId, async () => {
@@ -245,6 +250,19 @@ export function createPromptsRoutes(
 				}
 				return { status: 502, body: result }
 			})
+			const principal = principalOf(req)
+			console.info(
+				formatSendAudit({
+					status: answer.status,
+					sessionId,
+					workspace: ws.branch ?? ws.id,
+					by: principal?.kind === 'device' ? `device:${principal.device.id}` : 'admin',
+					via: req.headers['x-relay-client'] === 'mcp' ? 'mcp' : 'phone',
+					clientId: body.clientId,
+					replay,
+					ms: Date.now() - startedAt
+				})
+			)
 			return json(req, res, answer.status, answer.body)
 		}
 

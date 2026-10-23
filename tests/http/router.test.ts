@@ -330,6 +330,26 @@ describe('relay HTTP routing', () => {
 		expect(f.parkedPrompts.forgetDelivered).toHaveBeenCalledWith('chat-1', 'next task')
 	})
 
+	test('logs one audit line per send, naming who sent it but never what was said', async () => {
+		const info = vi.spyOn(console, 'info').mockImplementation(() => undefined)
+		const f = fixture()
+		const request = await listen(f.services)
+		const options = {
+			method: 'POST',
+			body: JSON.stringify({ workspaceId: 'workspace-1', text: 'a private prompt', clientId: 'intent-9-long-id' })
+		}
+		for (let attempt = 0; attempt < 2; attempt++) {
+			expect((await request('/api/sessions/chat-1/prompt', options)).status).toBe(200)
+		}
+		const lines = info.mock.calls.map(call => String(call[0])).filter(line => line.startsWith('[send]'))
+		expect(lines).toHaveLength(2)
+		expect(lines[0]).toMatch(
+			/^\[send\] delivered session=chat-1 workspace=test-branch by=admin via=phone client=intent-9 replay=no status=200 ms=\d+$/
+		)
+		expect(lines[1]).toContain('replay=yes')
+		expect(lines.join('\n')).not.toContain('private')
+	})
+
 	test('validates staged settings before delivery and preserves explicit false values', async () => {
 		const f = fixture()
 		const request = await listen(f.services)

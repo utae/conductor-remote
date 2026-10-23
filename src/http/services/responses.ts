@@ -8,6 +8,8 @@ import { type DeviceInfo, DeviceStore } from '../../auth/devices.ts'
 import { scrubWorkflowSecrets, withoutClientWindowEvidence } from '../../shared.ts'
 import type { BaseServices } from './base.ts'
 
+export type Principal = { kind: 'admin' } | { kind: 'device'; device: DeviceInfo }
+
 export function createResponsesServices(services: Pick<BaseServices, 'cfg'> & { devices?: DeviceStore }) {
 	const { cfg } = services
 	const devices = services.devices ?? new DeviceStore()
@@ -94,12 +96,24 @@ export function createResponsesServices(services: Pick<BaseServices, 'cfg'> & { 
 	 * accepted from the Authorization header only — a query string lands in proxy and Funnel
 	 * access logs, and a credential that can be revoked per device is not worth leaking that way.
 	 */
-	function authenticate(req: http.IncomingMessage): { kind: 'admin' } | { kind: 'device'; device: DeviceInfo } | null {
+	function authenticate(req: http.IncomingMessage): Principal | null {
+		const principal = identify(req)
+		if (principal) principals.set(req, principal)
+		return principal
+	}
+
+	function identify(req: http.IncomingMessage): Principal | null {
 		if (authed(req)) return { kind: 'admin' }
 		const auth = req.headers.authorization
 		if (!auth?.startsWith('Bearer ')) return null
 		const device = devices.verify(auth.slice('Bearer '.length))
 		return device ? { kind: 'device', device } : null
+	}
+
+	/** Who `authenticate` let in for this request, for a handler that wants to say who did something. */
+	const principals = new WeakMap<http.IncomingMessage, Principal>()
+	function principalOf(req: http.IncomingMessage): Principal | null {
+		return principals.get(req) ?? null
 	}
 
 	/** Failed pairings in the last minute, kept in memory: a restart forgiving them costs nothing a 72-bit code cannot absorb. */
@@ -172,6 +186,7 @@ export function createResponsesServices(services: Pick<BaseServices, 'cfg'> & { 
 		json,
 		authed,
 		authenticate,
+		principalOf,
 		pairDevice,
 		devices,
 		readBody,

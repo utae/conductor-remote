@@ -1975,3 +1975,37 @@ changes nothing there until it is updated.
   and `node bin/cli.js service update --check`, so a merge nobody was watching is not forgotten.
 - A PR that edits this section does not get auto-merge: it changes what agents do unattended, so it
   takes effect only after a person merges it.
+
+## Staying current with upstream (the fork)
+
+Applies in `utae/conductor-remote`, a fork of `hyldmo/conductor-remote` (`gh repo view --json parent`
+names it). Nowhere else.
+
+- **At the start of every session, before other work, check whether upstream moved.** Compare the
+  last upstream SHA the fork took in (`.github/upstream-synced`, one line) with upstream's `main`:
+  `gh api "repos/utae/conductor-remote/compare/$(cat .github/upstream-synced)...hyldmo:main"`
+  and read `ahead_by` (upstream commits not yet taken in) and `.commits`. **Do not compare `main` with
+  `main`:** the fork squash-merges, so a sync never makes upstream's commits ancestors of the fork's
+  `main`, and an ancestry comparison would count the same commits as new in every session, forever.
+  `ahead_by` of 0, or `gh` unable to answer (offline, signed out), is one line at most and then work
+  goes on.
+- **When there are new commits, say what they are, then ask.** Subjects with dates (newest last, the
+  first 30 if more), grouped into fixes, features and the rest. Call out what bears on this fork:
+  anything in `.files` under `src/auth/`, `src/http/`, `src/delivery/`, `web/src/lib/prompts/` or
+  `web/src/components/session/` (the code the fork changed), `package.json`, the lockfile and
+  `.github/` (dependencies and CI). Fetch the commits with `git fetch https://github.com/hyldmo/conductor-remote.git main`
+  (no remote is added) and say whether `git merge-tree --write-tree origin/main FETCH_HEAD` reports
+  conflicts, so the answer is "N commits, clean" or "N commits, conflicts in these files".
+  Then ask once whether to bring them in. **Change nothing until the answer is yes;** "later" means no
+  more asking this session.
+- **Bringing them in is a PR, never a rewrite of `main`.** Branch `sync/upstream-<YYYYMMDD>` from
+  `origin/main`, `git merge <upstream sha>` (resolve conflicts keeping the fork's behaviour and list
+  each resolution in the PR body), set `.github/upstream-synced` to that SHA in the same PR, run
+  `pnpm verify` on Node 24, and open it under "Shipping a change". `main` forbids force pushes and
+  this file's own release trap forbids rewinding it, so rebasing the fork's `main` onto upstream is
+  not an option; the marker, not history, is what records the sync.
+- **A sync PR does not get auto-merge.** It is other people's code arriving without review into a
+  service that drives this Mac and holds its token, so a person merges it. Once they have, update the
+  service as usual.
+- A PR that only moves the marker without merging the upstream commits is a lie about the fork; never
+  open one to silence the check.

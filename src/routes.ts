@@ -64,6 +64,8 @@ function param(method: Method, pattern: string): Route1 {
 export const routes = {
 	// ── the relay itself ──
 	state: flat('GET', '/api/state'),
+	/** Read-only relay / Conductor / send-ready diagnosis; touches no window. */
+	connection: flat('GET', '/api/connection'),
 	search: flat('GET', '/api/search'),
 	repos: flat('GET', '/api/repos'),
 	/** Picker labels the relay has previously read from Conductor, grouped by harness. */

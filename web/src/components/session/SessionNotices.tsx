@@ -1,6 +1,29 @@
-import { ArrowLeft } from 'lucide-react'
+import { AlertTriangle, ArrowLeft } from 'lucide-react'
 import { cn } from '../../lib/cn.ts'
+import type { ConnectionNotice } from '../../lib/connection.ts'
 import type { Session } from '../../lib/types.ts'
+import { UnlockLink } from '../ui.tsx'
+
+/**
+ * Why a message sent now may not reach the Mac, above the composer where the sending happens.
+ * Nothing when everything is fine — an always-visible "connected" would be noise a person learns to skip.
+ */
+export function ConnectionStrip({ notice }: { notice: ConnectionNotice | null }) {
+	if (!notice) return null
+	return (
+		<div
+			role="status"
+			data-connection-reason={notice.reason}
+			className="flex shrink-0 items-start gap-2 border-t border-border-soft bg-surface-2 px-4 py-2 text-xs text-working"
+		>
+			<AlertTriangle size={13} className="mt-0.5 shrink-0" />
+			<span className="min-w-0">
+				{notice.text}
+				{notice.unlock ? <UnlockLink className="ml-1" /> : null}
+			</span>
+		</div>
+	)
+}
 
 /** Native children cannot receive a phone prompt; return to their real parent first. */
 export function SubagentReplyNotice({ title, onReturn }: { title?: string | null; onReturn: () => void }) {

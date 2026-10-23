@@ -22,6 +22,24 @@ export function useWorkspaces() {
 	return query
 }
 
+/**
+ * What is wrong on the Mac right now (locked, Conductor closed), for the strip above the composer.
+ *
+ * Deliberately outside `useOnline`: a failure here must not raise the offline banner, because the
+ * state poll already decides whether the relay is reachable and this is a second opinion about
+ * what is *behind* it. It is polled slowly and only while a chat is open (`enabled`), since each
+ * answer costs the relay a process listing and two small scripts.
+ */
+export function useConnection(enabled: boolean) {
+	return useQuery({
+		queryKey: ['connection'],
+		queryFn: () => client.connection(),
+		enabled,
+		refetchInterval: 10_000,
+		retry: false
+	})
+}
+
 /** All (non-hidden) sessions in a workspace — the desktop app's "tabs". */
 /** Repos Conductor knows about — static enough to fetch once per app load. */
 export function useRepos() {

@@ -197,7 +197,11 @@ const PHONE_FLAT: Route0[] = [
 	routes.updatePrefs,
 	routes.push,
 	routes.pushSubscribe,
-	routes.pushUnsubscribe
+	routes.pushUnsubscribe,
+	// Read-only lookups the app makes on its own when a screen mounts (the model pill, the Auto toggle).
+	// Without them a paired phone's composer and workspace cards fail quietly with 403s.
+	routes.modelCatalog,
+	routes.autoModelConfig
 ]
 
 const PHONE_PARAM: Route1[] = [
@@ -211,6 +215,7 @@ const PHONE_PARAM: Route1[] = [
 	routes.diff,
 	routes.fileDiff,
 	routes.workspaceFiles,
+	routes.devServer,
 	routes.messages,
 	routes.context,
 	routes.sendPrompt,
@@ -220,7 +225,8 @@ const PHONE_PARAM: Route1[] = [
 /**
  * An allowlist, not a denylist: a route added later is closed to a phone until someone decides
  * otherwise. Everything that changes the Mac or its workspaces (create, archive, merge, status,
- * restart, keep-awake, settings, MCP) is absent, as are device management and the logs.
+ * restart, keep-awake, settings, MCP) is absent, as are device management and the logs. So are the
+ * lookups only a user action triggers and that cost real work (plan usage, which runs the provider CLIs).
  *
  * The send route still accepts the optional `agent` patch in its body, so a device can change a
  * chat's model or effort *through a send*; scoping that needs the body, not the path.

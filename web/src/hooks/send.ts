@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { client } from '../lib/api.ts'
-import { workflowStartFingerprint } from '../lib/prompts/pending.ts'
+import { answerWasLost, workflowStartFingerprint } from '../lib/prompts/pending.ts'
 import { useApp } from '../store.ts'
 import { useStartWorkflow } from './workflows.ts'
 
@@ -113,7 +113,9 @@ export function useSendPrompt() {
 				}
 				failPending(id, r.error || 'Send failed')
 			} catch (err) {
-				failPending(id, err instanceof Error ? err.message : String(err))
+				// No answer is not a failure: the prompt may be in Conductor already (the relay keeps
+				// going after the phone gives up or the page dies), so mark it for the transcript to settle.
+				failPending(id, err instanceof Error ? err.message : String(err), answerWasLost(err))
 			}
 			return false
 		},

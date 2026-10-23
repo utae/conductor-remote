@@ -2,7 +2,7 @@ import { Waypoints } from 'lucide-react'
 import { memo } from 'react'
 import { cn } from '../../lib/cn.ts'
 import { messagePreview, messageTime } from '../../lib/format.ts'
-import type { PendingMessage } from '../../lib/prompts/pending.ts'
+import { needsCheck, type PendingMessage } from '../../lib/prompts/pending.ts'
 import type { TranscriptNode } from '../../lib/transcript/tree.ts'
 import type { PendingPrompt, TranscriptEntry } from '../../lib/types.ts'
 import { UnlockLink } from '../ui.tsx'
@@ -192,13 +192,25 @@ export function PendingEntry({
 	onRetry: () => void
 	onDismiss: () => void
 }) {
-	const failed = p.status === 'error'
+	// A send nobody heard back about is not a failed one: the prompt may already be in the chat, and
+	// the transcript retires this bubble when its text shows up. Retry stays — it is safe, the relay
+	// answers a repeat of the same tap instead of sending it twice.
+	const checking = needsCheck(p)
+	const failed = p.status === 'error' && !checking
 	return (
 		<QueueBubble
 			state={failed ? 'failed' : 'pending'}
-			meta={failed ? p.error || 'Didn’t send' : p.queue ? 'Queueing…' : 'Sending…'}
+			meta={
+				checking
+					? 'Couldn’t confirm it arrived — checking the chat…'
+					: failed
+						? p.error || 'Didn’t send'
+						: p.queue
+							? 'Queueing…'
+							: 'Sending…'
+			}
 			actions={
-				failed
+				failed || checking
 					? [
 							{ label: 'Retry', onClick: onRetry, primary: true },
 							{ label: 'Dismiss message', onClick: onDismiss }
@@ -206,7 +218,7 @@ export function PendingEntry({
 					: []
 			}
 			dataUserMessage={messagePreview(p.text)}
-			dataMessageState={failed ? 'failed' : p.queue ? 'queueing' : 'sending'}
+			dataMessageState={checking ? 'checking' : failed ? 'failed' : p.queue ? 'queueing' : 'sending'}
 		>
 			<div>
 				<Markdown>{p.text}</Markdown>

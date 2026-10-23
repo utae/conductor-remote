@@ -2,6 +2,7 @@ import { config } from './configuration.ts'
 import { FLAG_ENV } from './flags.ts'
 import { install, restart, uninstall } from './installation.ts'
 import { logs, status } from './presentation.ts'
+import { update } from './update.ts'
 
 export async function runServiceCommand(): Promise<void> {
 	const cmd = process.argv[2] ?? 'status'
@@ -24,10 +25,13 @@ export async function runServiceCommand(): Promise<void> {
 		case 'logs':
 			logs()
 			break
+		case 'update':
+			update(process.argv.includes('--check'))
+			break
 		default:
 			console.error(
 				`unknown command: ${cmd}\n` +
-					'usage: service.ts <install|uninstall|restart|status|config|logs> [flags]\n' +
+					'usage: service.ts <install|uninstall|restart|status|config|logs|update> [flags]\n' +
 					`  flags (install): ${Object.keys(FLAG_ENV).join(', ')}`
 			)
 			process.exit(1)

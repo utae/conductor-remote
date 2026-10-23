@@ -1,6 +1,7 @@
 import { Check, Copy, LogOut, X } from 'lucide-react'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
+import { deviceIdFromToken } from '../../lib/auth-token.ts'
 import { cn } from '../../lib/cn.ts'
 import { useApp } from '../../store.ts'
 import { MacRow } from './MacRow.tsx'
@@ -32,6 +33,9 @@ export function ConnectSheet({
 	// room. It sat one 32px tap from Close, in a sheet whose reason to exist is a QR you look at.
 	const [confirming, setConfirming] = useState(false)
 	const url = token ? `${location.origin}/#token=${token}` : location.origin
+	// A paired phone's token is its own: showing it as a QR would hand a second phone the same identity, and
+	// then the Mac could no longer cut one off without the other. It shows how to revoke this one instead.
+	const deviceId = deviceIdFromToken(token)
 	// Relay is ahead of the build this app booted → a service-worker update is pending
 	// (ReloadPrompt will surface it). Flag it here so the versions explain a stale UI.
 	const stale = !!version && version !== __APP_VERSION__
@@ -103,8 +107,9 @@ export function ConnectSheet({
 					<div className="fade-in w-full shrink-0 rounded-xl border border-del/40 bg-del/10 px-3 py-2.5 text-left">
 						<p className="text-sm font-medium">Disconnect this device?</p>
 						<p className="mt-1 text-xs text-muted">
-							This forgets your access token. To get back in you’ll need the link or QR from the Mac running the relay —
-							this screen can’t show it to you again.
+							{deviceId
+								? 'This forgets this phone’s own access. To get back in you’ll need a new pairing code from the Mac (conductor-remote devices pair).'
+								: 'This forgets your access token. To get back in you’ll need the link or QR from the Mac running the relay — this screen can’t show it to you again.'}
 						</p>
 						<div className="mt-2.5 flex gap-2">
 							<button
@@ -125,20 +130,37 @@ export function ConnectSheet({
 					</div>
 				) : null}
 				<div className="flex w-full min-h-0 flex-1 flex-col items-center gap-4 overflow-y-auto overscroll-contain">
-					<p className="text-center text-sm text-muted">
-						Scan on another phone, or re-add this to your home screen. The link carries your access token.
-					</p>
-					<div className="shrink-0 rounded-2xl bg-white p-3">
-						<QRCode text={url} size={216} />
-					</div>
-					<button
-						type="button"
-						onClick={copy}
-						className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 px-3 py-2.5 text-sm active:bg-surface"
-					>
-						{copied ? <Check size={16} /> : <Copy size={16} />}
-						{copied ? 'Copied' : 'Copy link'}
-					</button>
+					{deviceId ? (
+						<div
+							data-paired-device={deviceId}
+							className="w-full shrink-0 rounded-xl border border-border bg-surface-2 px-3 py-3 text-sm"
+						>
+							<p className="font-medium">This phone is paired</p>
+							<p className="mt-1 text-xs leading-relaxed text-muted">
+								It has its own access, so there is no link or QR to share from here. To cut it off, run this on the Mac:
+							</p>
+							<code className="mt-2 block break-all rounded-lg bg-bg px-2 py-1.5 font-mono text-[11px] text-text">
+								conductor-remote devices revoke {deviceId}
+							</code>
+						</div>
+					) : (
+						<>
+							<p className="text-center text-sm text-muted">
+								Scan on another phone, or re-add this to your home screen. The link carries your access token.
+							</p>
+							<div className="shrink-0 rounded-2xl bg-white p-3">
+								<QRCode text={url} size={216} />
+							</div>
+							<button
+								type="button"
+								onClick={copy}
+								className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 px-3 py-2.5 text-sm active:bg-surface"
+							>
+								{copied ? <Check size={16} /> : <Copy size={16} />}
+								{copied ? 'Copied' : 'Copy link'}
+							</button>
+						</>
+					)}
 					<ThemeRow />
 					<NotificationsRow />
 					<MacRow />

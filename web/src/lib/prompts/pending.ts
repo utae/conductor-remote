@@ -58,6 +58,13 @@ export interface PendingMessage {
 	error?: string
 	/** Restored from storage as a send nobody is awaiting any more — see the header. */
 	interrupted?: boolean
+	/**
+	 * The request ended without the relay ever answering (no connection, a timeout), so whether
+	 * the prompt landed is unknown. Unlike a refusal the relay *spoke*, that is not a fact about
+	 * the send: it is reconciled against the transcript like an interrupted one (`isUnconfirmed`)
+	 * and shown as "checking", not as a failure. See `answerWasLost`.
+	 */
+	unsure?: boolean
 	createdAt: number
 }
 
@@ -158,7 +165,21 @@ export function promptIndicator(
  * state is a fact about the send, and matching text elsewhere in the chat (someone
  * says "yes" twice) must never quietly retire it.
  */
-export const isUnconfirmed = (p: PendingMessage): boolean => p.status === 'sending' || !!p.interrupted
+export const isUnconfirmed = (p: PendingMessage): boolean => p.status === 'sending' || !!p.interrupted || !!p.unsure
+
+/** A bubble that has stopped waiting but cannot say whether the prompt arrived: "checking", not "failed". */
+export const needsCheck = (p: PendingMessage): boolean => p.status === 'error' && isUnconfirmed(p)
+
+/**
+ * Whether a failed send never heard from the relay. An `ApiError` carries the HTTP status the relay
+ * answered with — a refusal it stands behind — and status 0 is the client's own timeout (web/src/lib/api.ts);
+ * anything that is not an error with a positive status (a `TypeError: Failed to fetch` from a dropped
+ * connection, an aborted request) is the same silence. Duck-typed so this module stays free of the API client.
+ */
+export function answerWasLost(err: unknown): boolean {
+	const status = err instanceof Error ? (err as { status?: unknown }).status : undefined
+	return !(typeof status === 'number' && status > 0)
+}
 
 /** Workflow prompts gain server instructions, but retain the exact user objective after this heading. */
 export function pendingMatchesTranscript(pending: PendingMessage, transcriptText: string): boolean {

@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import {
+	answerWasLost,
 	isUnconfirmed,
 	loadPending,
 	loadWorkflowClientAttempts,
+	needsCheck,
 	type PendingMessage,
 	pendingMatchesTranscript,
 	promptIndicator,
@@ -95,6 +97,19 @@ describe('pending prompts across a reload', () => {
 		expect(isUnconfirmed(message())).toBe(false)
 	})
 
+	test('a send whose answer was lost defers to the transcript like an interrupted one', () => {
+		const lost = message({ unsure: true, error: 'Failed to fetch' })
+		expect(isUnconfirmed(lost)).toBe(true)
+		expect(needsCheck(lost)).toBe(true)
+		// Survives a reload as it was, so the chat can still settle it.
+		writePending([lost])
+		expect(loadPending()).toEqual([lost])
+		// A refusal the relay stood behind, and a bubble still spinning, are neither "checking".
+		expect(needsCheck(message())).toBe(false)
+		expect(needsCheck(message({ status: 'sending' }))).toBe(false)
+		expect(needsCheck(message({ interrupted: true }))).toBe(true)
+	})
+
 	test('a prompt older than a day is not resurrected', () => {
 		writePending([message({ createdAt: Date.now() - DAY - 1000 }), message({ id: 'a2' })])
 		expect(loadPending().map(p => p.id)).toEqual(['a2'])
@@ -167,5 +182,21 @@ describe('Workflow start identities', () => {
 		expect(loadWorkflowClientAttempts()).toEqual({ [attempt.key]: attempt })
 		expect(workflowStartFingerprint('Ship it.', target)).toBe(fingerprint)
 		expect(workflowStartFingerprint('Ship something else.', target)).not.toBe(fingerprint)
+	})
+})
+
+describe('answerWasLost', () => {
+	// ApiError (web/src/lib/api.ts) is an Error carrying the HTTP status; duck-typed here on purpose.
+	const apiError = (status: number) => Object.assign(new Error('x'), { status })
+
+	test('silence is a lost answer: a dropped connection and the client’s own timeout', () => {
+		expect(answerWasLost(new TypeError('Failed to fetch'))).toBe(true)
+		expect(answerWasLost(apiError(0))).toBe(true)
+		expect(answerWasLost(new DOMException('aborted', 'AbortError'))).toBe(true)
+		expect(answerWasLost('something odd')).toBe(true)
+	})
+
+	test('anything the relay answered is a fact about the send, so it stays a failure', () => {
+		for (const status of [400, 401, 409, 502, 503]) expect(answerWasLost(apiError(status))).toBe(false)
 	})
 })

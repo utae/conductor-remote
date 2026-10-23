@@ -152,6 +152,20 @@ describe('deviceMay', () => {
 		expect(deviceMay('phone', 'POST', '/api/sessions/s1/prompt')).toBe(true)
 	})
 
+	it('allows the read-only lookups the app makes by itself, but not the ones that do real work or write', () => {
+		expect(deviceMay('phone', 'GET', '/api/models')).toBe(true)
+		expect(deviceMay('phone', 'GET', '/api/auto-model')).toBe(true)
+		expect(deviceMay('phone', 'GET', '/api/workspaces/w1/dev-server')).toBe(true)
+		// Same paths, other verbs: starting or stopping the dev server and editing Auto are writes.
+		expect(deviceMay('phone', 'POST', '/api/workspaces/w1/dev-server')).toBe(false)
+		expect(deviceMay('phone', 'DELETE', '/api/workspaces/w1/dev-server')).toBe(false)
+		expect(deviceMay('phone', 'PATCH', '/api/auto-model')).toBe(false)
+		// Plan usage runs the provider CLIs; only opening its sheet should pay for that, and not for a phone.
+		expect(deviceMay('phone', 'GET', '/api/usage')).toBe(false)
+		// The live model menu opens Conductor's real menu on the Mac.
+		expect(deviceMay('phone', 'GET', '/api/sessions/s1/models')).toBe(false)
+	})
+
 	it('refuses everything that changes the Mac or its workspaces', () => {
 		for (const [method, pathname] of [
 			['POST', '/api/conductor/restart'],

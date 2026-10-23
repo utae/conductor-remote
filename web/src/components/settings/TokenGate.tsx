@@ -1,6 +1,7 @@
 import { QrCode } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
-import { parseTokenInput } from '../../lib/auth-token.ts'
+import { ApiError, client } from '../../lib/api.ts'
+import { deviceNameGuess, parseTokenInput } from '../../lib/auth-token.ts'
 import { useApp } from '../../store.ts'
 import { QRScanner } from './QRScanner.tsx'
 
@@ -9,6 +10,9 @@ export function TokenGate() {
 	const [value, setValue] = useState('')
 	const [error, setError] = useState(false)
 	const [scanning, setScanning] = useState(false)
+	const [code, setCode] = useState('')
+	const [pairing, setPairing] = useState(false)
+	const [pairError, setPairError] = useState<string | null>(null)
 
 	// Both the paste form and a scanned QR resolve through the same parser; setToken persists it and a
 	// wrong token just 401s and bounces back here.
@@ -22,6 +26,30 @@ export function TokenGate() {
 	const submit = (e: FormEvent) => {
 		e.preventDefault()
 		accept(value)
+	}
+
+	// A pairing code is the alternative to carrying the shared token around in a URL: it is spent once, and
+	// what comes back is a token that is this phone's own, so the Mac can cut it off without touching the rest.
+	const pair = async (e: FormEvent) => {
+		e.preventDefault()
+		const trimmed = code.trim()
+		if (!trimmed || pairing) return
+		setPairing(true)
+		setPairError(null)
+		try {
+			const paired = await client.pairDevice(trimmed, deviceNameGuess(navigator.userAgent))
+			setToken(paired.token)
+		} catch (err) {
+			setPairError(
+				err instanceof ApiError && err.status === 401
+					? 'That code is wrong, used or expired. Run `conductor-remote devices pair` on the Mac for a new one.'
+					: err instanceof ApiError && err.status === 429
+						? 'Too many wrong codes. Wait a minute and try again.'
+						: 'Couldn’t reach the relay to pair. Check Tailscale and that the Mac is awake.'
+			)
+		} finally {
+			setPairing(false)
+		}
 	}
 
 	if (scanning) return <QRScanner onResult={accept} onClose={() => setScanning(false)} />
@@ -74,6 +102,38 @@ export function TokenGate() {
 				{error ? (
 					<p className="text-xs" style={{ color: 'var(--color-del)' }}>
 						Couldn’t find a token in that — paste the token or the full URL, or scan the QR.
+					</p>
+				) : null}
+			</form>
+			<form onSubmit={pair} className="flex w-full max-w-xs flex-col gap-2 border-t border-border-soft pt-4">
+				<p className="text-xs leading-relaxed text-muted">
+					Or pair with a one-time code from <span className="font-mono">conductor-remote devices pair</span> — this
+					phone gets its own access, which the Mac can revoke alone.
+				</p>
+				<input
+					type="text"
+					autoCapitalize="none"
+					autoCorrect="off"
+					spellCheck={false}
+					value={code}
+					onChange={e => {
+						setCode(e.target.value)
+						setPairError(null)
+					}}
+					placeholder="Pairing code"
+					aria-label="Pairing code"
+					className="rounded-xl border border-border bg-surface-2 px-3 py-2.5 text-center font-mono text-base text-text placeholder:font-sans placeholder:text-faint"
+				/>
+				<button
+					type="submit"
+					disabled={pairing || !code.trim()}
+					className="pill justify-center py-2.5 disabled:opacity-50"
+				>
+					{pairing ? 'Pairing…' : 'Pair this phone'}
+				</button>
+				{pairError ? (
+					<p className="text-xs" role="alert" style={{ color: 'var(--color-del)' }}>
+						{pairError}
 					</p>
 				) : null}
 			</form>

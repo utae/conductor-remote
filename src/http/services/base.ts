@@ -52,7 +52,7 @@ export function createBaseServices() {
 	if (cfg.devWebPort !== undefined && process.env.CONDUCTOR_WORKSPACE_ID) {
 		const preview = new URL(`http://localhost:${cfg.devWebPort}/`)
 		preview.hash = new URLSearchParams({ token: cfg.token }).toString()
-		// `yarn dev` is itself one application behind Conductor's Run button. Publish
+		// `pnpm dev` is itself one application behind Conductor's Run button. Publish
 		// the same canonical URL printed below. The private live advertisement crosses
 		// into the installed relay that normally serves the phone; its forwarding code
 		// still treats this exactly like any full URL and knows nothing about the token.

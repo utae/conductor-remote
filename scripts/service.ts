@@ -6,7 +6,7 @@
  *   node scripts/service.ts <install|uninstall|status|restart>
  *   (or, once installed globally: `conductor-remote service <...>`)
  *
- * `yarn deploy` builds dist/ first, then runs `install`.
+ * `pnpm run deploy` builds dist/ first, then runs `install`.
  */
 import { applyFlags } from './service/flags.ts'
 

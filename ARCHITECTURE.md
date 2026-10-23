@@ -155,11 +155,11 @@ scripts/
                          phone URL QR, keep-awake commands/root setup and PWA icons
   check-applescript.ts, copy-applescript.ts, check-imports.ts
                          assembled-program validation, matching package assets and browser boundaries
-  generate-orchestration-schema.ts  snapshot-free Drizzle export (yarn db:schema)
+  generate-orchestration-schema.ts  snapshot-free Drizzle export (pnpm db:schema)
 tests/                   suites grouped by domain; orchestration/{persistence,workflow,delegation},
                          writes/, reads/, voice/, session/, transcript/, workspaces/ and other peers
 public/                  repo-root icon assets, self-heal.js and push-sw.js
-numux.config.ts          yarn dev: Vite + relay, on the workspace's allocated ports
+numux.config.ts          pnpm dev: Vite + relay, on the workspace's allocated ports
 dist/                    built PWA; gitignored and served by the relay
 dist-node/               emitted relay/service JS plus manifest-listed AppleScript assets; gitignored
 ```

@@ -1391,18 +1391,18 @@ Two asymmetric halves — keep them separate:
 ## Commands
 
 ```bash
-yarn verify   # typecheck + lint + repository checks + Vitest (slowest last) — before every commit
-yarn test     # run the Vitest suite once
-yarn test:watch # rerun affected Vitest tests while editing
-yarn test:coverage # run Vitest with V8 text + HTML coverage reports
-yarn check:repo # import boundaries, assembled AppleScript validation, generated schema check
-yarn fix      # Biome autofix (format + safe lints)
-yarn build    # Vite → dist/ (the PWA the relay serves)
-yarn build:node # emit dist-node/ JS, then copy every ordered AppleScript manifest part beside its loader
-yarn start    # run the relay (node bin/cli.js)
-yarn dev      # numux TUI (numux.config.ts): Vite :5173 (HMR) proxying /api → relay :8787
-yarn deploy   # build + install/reload the login LaunchAgent, print phone URL
-yarn service  # {status,restart,uninstall} the LaunchAgent
+pnpm verify   # typecheck + lint + repository checks + Vitest (slowest last) — before every commit
+pnpm test     # run the Vitest suite once
+pnpm test:watch # rerun affected Vitest tests while editing
+pnpm test:coverage # run Vitest with V8 text + HTML coverage reports
+pnpm check:repo # import boundaries, assembled AppleScript validation, generated schema check
+pnpm fix      # Biome autofix (format + safe lints)
+pnpm build    # Vite → dist/ (the PWA the relay serves)
+pnpm build:node # emit dist-node/ JS, then copy every ordered AppleScript manifest part beside its loader
+pnpm start    # run the relay (node bin/cli.js)
+pnpm dev      # numux TUI (numux.config.ts): Vite :5173 (HMR) proxying /api → relay :8787
+pnpm run deploy   # build + install/reload the login LaunchAgent, print phone URL
+pnpm service  # {status,restart,uninstall} the LaunchAgent
 ```
 
 ## Traps (these will bite)
@@ -1422,7 +1422,7 @@ yarn service  # {status,restart,uninstall} the LaunchAgent
   under plain `node` (Node 24's default TS *type-stripping*, no `--experimental-transform-types`).
   But Node **refuses to type-strip anything under `node_modules`** (`ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`),
   so an *installed* package can't run raw `.ts` — it must ship real JS. So `prepack`
-  runs `yarn build:node` (`tsc -p tsconfig.build.json`) → `dist-node/`, and `bin/cli.js`
+  runs `pnpm build:node` (`tsc -p tsconfig.build.json`) → `dist-node/`, and `bin/cli.js`
   picks the artifact by whether its own path contains `/node_modules/` (compiled) or not
   (live source). `tsconfig.build.json` uses **`rewriteRelativeImportExtensions`** so the
   sources keep their `.ts` import specifiers (which let Node run them unbuilt) and emit
@@ -1451,7 +1451,7 @@ yarn service  # {status,restart,uninstall} the LaunchAgent
   explicit flags could override them. Keep the entrypoint stable for `bin/cli.js`.
 - **The relay binds loopback; the HTTPS URL comes from Tailscale, and `EXPOSE` picks
   who can reach it.** `server.listen` uses `127.0.0.1` (override with `RELAY_HOST`), and
-  `yarn deploy` (`scripts/service/network.ts` ▸ `ensureTailscale`) fronts a stable `https://<magicdns>/`
+  `pnpm run deploy` (`scripts/service/network.ts` ▸ `ensureTailscale`) fronts a stable `https://<magicdns>/`
   with real TLS (which the PWA service worker needs). Two modes, `EXPOSE=public|tailnet`:
   `public` (**default**) = `tailscale funnel` — reachable from **any browser on the
   internet**, gated only by the 128-bit token (`src/http/services/responses.ts` compares it constant-time);
@@ -1459,7 +1459,7 @@ yarn service  # {status,restart,uninstall} the LaunchAgent
   next to the token (`…/conductor-remote/expose`) so a bare re-deploy keeps posture;
   switching to `tailnet` runs `funnel reset` first. Funnel must be enabled for the
   tailnet (Admin console nodeAttr) or it falls back to tailnet-only and says so.
-  `curl 127.0.0.1:8787` works for local checks; `yarn service status` prints the URL
+  `curl 127.0.0.1:8787` works for local checks; `pnpm service status` prints the URL
   and whether it's public or tailnet-only.
   **The relay is not always on :443, and the deploy must never assume it is.** Funnel
   listens on 443, 8443 and 10000 only, and OpenAI's cloud dials nothing but 443
@@ -1495,7 +1495,7 @@ yarn service  # {status,restart,uninstall} the LaunchAgent
   remains authoritative, resolved with its user → shared repo → repo-local →
   managed precedence; a running application can otherwise explicitly advertise
   the complete loopback URL it wants opened. That producer-owned boundary is how
-  `yarn dev` carries this relay's dynamic `#token` without teaching the forwarding
+  `pnpm dev` carries this relay's dynamic `#token` without teaching the forwarding
   layer what a relay token is. The source relay publishing that URL is not usually
   the installed relay serving the phone, so advertisements cross that process
   boundary through private, workspace-scoped files in
@@ -1529,7 +1529,7 @@ yarn service  # {status,restart,uninstall} the LaunchAgent
   `dev-forwards.json` is the ownership receipt: one record per workspace/local-port
   pair, and remove or replace only the exact Serve target it records because every
   other mapping belongs to the user. Its version stays additive so an installed
-  relay and a source `yarn dev` relay can share it during an update. Each record also
+  relay and a source `pnpm dev` relay can share it during an update. Each record also
   names the bridge process and a private loopback challenge: a node-watch restart
   must not steal the installed relay's live forwards. On an owning relay restart,
   rebuild each ephemeral bridge only when that exact old mapping and target process
@@ -1584,12 +1584,17 @@ yarn service  # {status,restart,uninstall} the LaunchAgent
   branch, and the two look like two different workspaces sharing a repo. Read the
   branch with `git branch --show-current` before acting on it, and resolve a path
   with `readlink -f` before concluding another workspace is doing your work.
-- **Yarn is standalone here.** Its own `yarn.lock` + `.yarnrc.yml`
-  (`nodeLinker: node-modules`) makes this its own project despite a `package.json`
-  higher up in `$HOME`. `package.json` pins `yarn@4` via `packageManager`, so
-  contexts without a corepack shim (CI, a bare shell) must `corepack enable` first
-  — see `.github/workflows/ci.yml`. The verify script is named `verify`, not `check`
-  (collides with a Yarn Classic builtin).
+- **pnpm is standalone here, and `deploy` is a pnpm builtin.** Its own `pnpm-lock.yaml` +
+  `pnpm-workspace.yaml` make this its own project (no `packages:` list — it only carries
+  `allowBuilds`). `package.json` pins `pnpm` via `packageManager`, so contexts without a
+  corepack shim (CI, a bare shell) must `corepack enable` first — see
+  `.github/workflows/ci.yml`. Dependency build scripts are **denied** (`allowBuilds: false`
+  for `esbuild` and `sharp`, whose native binaries ship as optional packages), or
+  `pnpm install` exits non-zero with `ERR_PNPM_IGNORED_BUILDS`. `node_modules` is strict, so
+  a package imported without being declared fails to resolve rather than riding a hoist.
+  **Never type `pnpm deploy`** — it is also a builtin (deploy a workspace package), so the
+  script is always `pnpm run deploy`; and since that script installs the LaunchAgent, don't
+  run it to "test" anything. The verify script is named `verify`, not `check`.
 - **The log is a wire surface now, not just a file.** `installLogCapture()`
   (`src/host/logbuf.ts`, called first in `src/http/services/base.ts`) wraps `console.*`: every line
   also lands in a 600-entry ring served by `GET /api/logs`, and the stdout copy gains a
@@ -1613,7 +1618,7 @@ yarn service  # {status,restart,uninstall} the LaunchAgent
   session — `osacompile` and the handler check both pass it. Keep logic *outside*
   the tell and reach in via one-line helpers (`tabLabel`, `paneLabels`), or name
   variables `strip`/`pane`/`parentEl`. Nothing else in the toolchain reads this
-  language, so run `yarn verify` after every edit.
+  language, so run `pnpm verify` after every edit.
   - **A `whose` clause is a *reference*, not a list, and reading elements out of
     one re-runs the filter per element.** So `repeat with l in (UI elements of b
     whose role is "AXLink")` is quadratic in the number of hits, and it looks
@@ -1672,7 +1677,7 @@ yarn service  # {status,restart,uninstall} the LaunchAgent
 - **Verify PWA layout in the iOS Simulator, not by reasoning.** None of this
   reproduces in desktop Chrome or even simulator *Safari* (there `clientHeight ==
   innerHeight` and the insets are 0) — only in a real home-screen web app. Recipe:
-  `xcrun simctl boot "iPhone 17 Pro"`, serve the build (`RELAY_PORT=879x yarn
+  `xcrun simctl boot "iPhone 17 Pro"`, serve the build (`RELAY_PORT=879x pnpm
   start`), `simctl openurl` the token URL, then drive Safari's Share ▸ Add to Home
   Screen with `cliclick` (map device points to screen with `x+760, y+124` for the
   default window position; **one click per shell call** — batched clicks get eaten
@@ -1803,7 +1808,7 @@ yarn service  # {status,restart,uninstall} the LaunchAgent
     them was dead text, while the same path written as a Markdown link has opened the
     source sheet for a while (`Markdown.tsx` ▸ `sourceReference`). The rule that keeps
     this from underlining half the transcript is **existence, not shape**: inline code
-    holds far more than paths (`yarn build`, `sessions.status`, `Array.map`), so a
+    holds far more than paths (`pnpm build`, `sessions.status`, `Array.map`), so a
     worktree-relative mention is matched against the worktree's own file list
     (`GET /api/workspaces/:id/files`, `git.ts` ▸ `listSourceFiles`: tracked *plus*
     untracked-not-ignored, plus previewable files under the root `.context/` even when
@@ -1897,7 +1902,7 @@ yarn service  # {status,restart,uninstall} the LaunchAgent
 ## Conventions
 
 - **Biome** formats and lints (`biome.jsonc`): tabs, single quotes, no semicolons,
-  no trailing commas, 120 cols, arrow parens as-needed. Don't hand-format — run `yarn fix`.
+  no trailing commas, 120 cols, arrow parens as-needed. Don't hand-format — run `pnpm fix`.
 - **TS strict**, `verbatimModuleSyntax` (use `import type`), `.ts`/`.tsx` extensions
   in imports are required (`allowImportingTsExtensions`).
 - **Layout:** `src/server.ts` and `src/mcp.ts` are stable executable entrypoints.

@@ -20,7 +20,7 @@
  *      only exceptions, so each must stay worth being one: no `node:` import, in it or
  *      in anything it pulls in.
  *
- * `yarn build` might catch rule 1 as a Rollup warning about an externalised builtin,
+ * `pnpm build` might catch rule 1 as a Rollup warning about an externalised builtin,
  * on a good day, at the bottom of a wall of output. This says which line.
  *
  * Portable (no macOS, no relay), stdlib-only, strip-clean — see AGENTS.md.

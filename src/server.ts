@@ -64,7 +64,7 @@ server.listen(cfg.port, cfg.host, () => {
 		).unref()
 		queueMicrotask(() => void recoverUiLease().finally(wakeWorkflows))
 	}
-	// Under `yarn dev` the app comes from Vite and only /api comes from here, so the URL worth
+	// Under `pnpm dev` the app comes from Vite and only /api comes from here, so the URL worth
 	// printing is Vite's — carrying the token, which Vite itself has no way to print.
 	const dev = cfg.devWebPort !== undefined
 	console.info(
@@ -80,7 +80,7 @@ server.listen(cfg.port, cfg.host, () => {
 				: `  Local:  http://${cfg.host}:${cfg.port}/#token=${cfg.token}`,
 			dev
 				? "  Phone:  same URL with this Mac's tailnet IP in place of localhost (Vite prints it as `Network:`)"
-				: '  Phone:  fronted by `tailscale funnel`/`serve` — run `yarn service status` for the HTTPS URL'
+				: '  Phone:  fronted by `tailscale funnel`/`serve` — run `pnpm service status` for the HTTPS URL'
 		].join('\n')
 	)
 	// Loud, actionable warning in relay.log if the node's MagicDNS name drifted from the saved phone URL's host

@@ -32,9 +32,9 @@ if (process.argv.includes('--check')) {
 	try {
 		current = readFileSync(outputPath, 'utf8')
 	} catch {
-		throw new Error('orchestration schema artifact is missing; run yarn db:schema')
+		throw new Error('orchestration schema artifact is missing; run pnpm db:schema')
 	}
-	if (current !== generated) throw new Error('orchestration schema artifact is stale; run yarn db:schema')
+	if (current !== generated) throw new Error('orchestration schema artifact is stale; run pnpm db:schema')
 } else {
 	writeFileSync(outputPath, generated)
 }

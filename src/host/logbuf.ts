@@ -14,7 +14,7 @@
  *   token-gated, so that isn't an escalation, but the whole point of the feature is copy-pasting
  *   logs into a bug report, and that must not ship the key to the relay.
  * - **The files belong to the LaunchAgent, not necessarily to this process.** Only the managed
- *   daemon has them as its stdout/stderr; a dev `yarn start` writes to a terminal. Callers get
+ *   daemon has them as its stdout/stderr; a dev `pnpm start` writes to a terminal. Callers get
  *   `managed` so they can say whose log they're reading rather than implying it's this one's.
  */
 import fs from 'node:fs'

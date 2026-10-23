@@ -10,7 +10,7 @@
  *   exist, so "unsupported" would be a lie: it's one Share-sheet tap away.
  * - **`insecure`** — a service worker needs a secure context. `127.0.0.1` counts,
  *   the tailnet HTTPS URL counts, a plain `http://100.x` does not. This is the one
- *   people hit when they skip `yarn deploy` and browse the LAN IP directly.
+ *   people hit when they skip `pnpm run deploy` and browse the LAN IP directly.
  * - **`unsupported`** — genuinely no service worker or no Push API.
  */
 

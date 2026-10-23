@@ -39,7 +39,7 @@ const projectDir = packageRoot(import.meta.dirname)
 const REGISTRY = process.env.NPM_REGISTRY ?? 'https://registry.npmjs.org'
 // Registry poll cadence. The poll is a single cheap GET off npm's CDN, so a tight loop costs nothing, and
 // a fresh release should reach the phone while you still care about it — 5 minutes lands `latest` within
-// one coffee sip, and an out-of-band `yarn deploy` still heals in ~a minute via the disk-skew check below.
+// one coffee sip, and an out-of-band `pnpm run deploy` still heals in ~a minute via the disk-skew check below.
 // (The first poll fires ~90s after boot, then on this interval, so a restart re-syncs fast regardless of
 // cadence.) `AUTO_UPDATE_INTERVAL_MINUTES` retunes it with no code change — raise it to e.g. 60 when
 // releases go quiet; values are floored at 1 min (below that you're just racing the 60s disk-skew heal and
@@ -192,7 +192,7 @@ function log(msg: string): void {
  *   off — disabled.  check — poll + report, never install.  auto — poll + install + self-restart.
  * `auto` (default when unset, or when AUTO_UPDATE=on) requires BOTH gates; without them, an explicit
  * `on` degrades to `check` (visibility without an unsafe install) and an unset default degrades to `off`
- * (a dev `yarn start` or worktree daemon stays silent).
+ * (a dev `pnpm start` or worktree daemon stays silent).
  */
 function resolveMode(): UpdateMode {
 	const raw = process.env.AUTO_UPDATE?.trim().toLowerCase()
@@ -218,7 +218,7 @@ function scheduleRestart(reason: string): void {
 
 /**
  * Reload if the on-disk install no longer matches this running process — an out-of-band upgrade
- * (manual `npm i -g`, `yarn deploy`, or CI) that the registry poll won't catch, since it compares
+ * (manual `npm i -g`, `pnpm run deploy`, or CI) that the registry poll won't catch, since it compares
  * npm's latest against our *running* version, not against disk. Any mismatch converges process→disk;
  * a null read (unreadable/unparseable) is ignored so we never restart-loop on a transient failure.
  */

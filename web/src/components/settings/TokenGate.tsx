@@ -78,7 +78,7 @@ export function TokenGate() {
 				) : null}
 			</form>
 			<p className="max-w-xs text-xs leading-relaxed text-faint">
-				Lost it? Run <span className="font-mono">yarn service status</span> on your Mac to reprint the QR, then scan it
+				Lost it? Run <span className="font-mono">pnpm service status</span> on your Mac to reprint the QR, then scan it
 				above — no need to retype anything.
 			</p>
 		</div>

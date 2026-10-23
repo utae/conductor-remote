@@ -14,11 +14,3 @@ coverage/
 
 # Conductor: personal per-workspace overrides (shared settings.toml is committed)
 .conductor/settings.local.toml
-
-# yarn (berry, node-modules linker)
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-.pnp.*

@@ -81,7 +81,7 @@ export function buildPlist(): string {
 	const nodeDir = path.dirname(process.execPath)
 	const daemonPath = `${nodeDir}:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin`
 	// MANAGED marks this as the launchd-supervised instance: src/host/autoupdate.ts only self-restarts (exit →
-	// KeepAlive respawn) when it sees this, so a dev `yarn start` or worktree run never auto-updates.
+	// KeepAlive respawn) when it sees this, so a dev `pnpm start` or worktree run never auto-updates.
 	const envEntries: Array<[string, string]> = [
 		['PATH', daemonPath],
 		['CONDUCTOR_REMOTE_MANAGED', '1']

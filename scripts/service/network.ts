@@ -102,7 +102,7 @@ function leaveShared(url: string, state: RelayServeState, want: 'public' | 'tail
 function refuseNoPort(state: RelayServeState, candidates: number[]): void {
 	const held = candidates.map(p => `:${p} → ${describeTaken(state, p)}`).join('; ')
 	console.info(`\n  ⚠ every port the relay could take already carries another service (${held}). Not touching them.`)
-	console.info(`    Free one, then run \`yarn deploy\` again — or mount by hand:  ${byHand('serve', '<port>')}`)
+	console.info(`    Free one, then run \`pnpm run deploy\` again — or mount by hand:  ${byHand('serve', '<port>')}`)
 }
 
 /**

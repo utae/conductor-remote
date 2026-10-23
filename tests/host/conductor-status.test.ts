@@ -4,8 +4,37 @@
  * `listsConductorProcess` is the only parse in the probe: the helper processes carry the same
  * bundle path as a prefix, and a match on the path alone would call a dead app alive.
  */
-import { describe, expect, it } from 'vitest'
-import { connectionReason, listsConductorProcess } from '../../src/host/conductor-status.ts'
+import { describe, expect, it, vi } from 'vitest'
+import { connectionReason, listsConductorProcess, retryOnce } from '../../src/host/conductor-status.ts'
+
+describe('retryOnce', () => {
+	it('returns a definite answer without a second call', async () => {
+		const probe = vi.fn(async () => 3)
+		expect(await retryOnce(probe)).toBe(3)
+		expect(probe).toHaveBeenCalledTimes(1)
+	})
+
+	it('treats false and 0 as answers, not as failures', async () => {
+		const falsy = vi.fn(async () => false)
+		expect(await retryOnce(falsy)).toBe(false)
+		expect(falsy).toHaveBeenCalledTimes(1)
+		const zero = vi.fn(async () => 0)
+		expect(await retryOnce(zero)).toBe(0)
+		expect(zero).toHaveBeenCalledTimes(1)
+	})
+
+	it('tries once more after a null and uses the second answer', async () => {
+		const probe = vi.fn<() => Promise<number | null>>().mockResolvedValueOnce(null).mockResolvedValueOnce(7)
+		expect(await retryOnce(probe)).toBe(7)
+		expect(probe).toHaveBeenCalledTimes(2)
+	})
+
+	it('gives up after the second null instead of looping', async () => {
+		const probe = vi.fn(async () => null)
+		expect(await retryOnce(probe)).toBeNull()
+		expect(probe).toHaveBeenCalledTimes(2)
+	})
+})
 
 describe('connectionReason', () => {
 	it('is ok only when nothing is wrong and every probe answered', () => {

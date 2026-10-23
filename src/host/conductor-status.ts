@@ -77,8 +77,24 @@ export interface ConductorStatus {
 	reason: ConnectionReason
 }
 
+/**
+ * Run a probe, and once more if it could not answer (`null`). Each probe takes 30–70ms when it
+ * works, so a `null` is a spawn that lost a race with a busy relay and a second try is cheap — and
+ * without it one 5s timeout turned a healthy Mac into `unknown` / `sendReady: false` (measured:
+ * 4 of 20 calls in the minutes after a deploy). Only a definite answer, `false` included, ends it.
+ * It cannot help when the whole event loop is stalled; it only stops one slow probe deciding the verdict.
+ */
+export async function retryOnce<T>(probe: () => Promise<T | null>): Promise<T | null> {
+	const first = await probe()
+	return first !== null ? first : probe()
+}
+
 /** Read-only: three concurrent probes, none of which focuses, opens or presses anything. */
 export async function readConductorStatus(): Promise<ConductorStatus> {
-	const [running, windows, locked] = await Promise.all([conductorRunning(), conductorWindowCount(), screenLocked()])
+	const [running, windows, locked] = await Promise.all([
+		retryOnce(conductorRunning),
+		retryOnce(conductorWindowCount),
+		retryOnce(screenLocked)
+	])
 	return { running, windows, locked, reason: connectionReason({ locked, running, windows }) }
 }

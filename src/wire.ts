@@ -453,6 +453,30 @@ export interface StateResponse {
 	update?: UpdateStatus
 }
 
+/**
+ * Why a send cannot be expected to land right now. `unknown` is a probe that could not
+ * answer, never a verdict, and the lock outranks the rest because it hides the session.
+ */
+export type ConnectionReason = 'ok' | 'locked' | 'conductor_not_running' | 'no_window' | 'unknown'
+
+/** GET /api/connection — the three things the phone needs to tell apart: relay, Conductor, send-ready. */
+export interface ConnectionResponse {
+	/** Answering this request proves the relay is reachable and the token was accepted. */
+	relay: 'ok'
+	conductor: {
+		/** `null` when the process list could not be read. */
+		running: boolean | null
+		/** Windows across every Space; `null` when the window server probe failed. */
+		windows: number | null
+		locked: boolean | null
+	}
+	reason: ConnectionReason
+	/** `reason` is `ok` and the write strategy is available. A parked send is still possible when false. */
+	sendReady: boolean
+	actuator: ActuatorInfo
+	version?: string
+}
+
 /** One workspace a search matched, with the chat evidence and the tab title to show. */
 export interface SearchResult extends SearchEvidence<SearchWorkspace> {
 	sessionTitle: string | null

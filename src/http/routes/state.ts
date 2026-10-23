@@ -4,6 +4,7 @@ import { attachRunActivity } from '../../dev-server/run-activity.ts'
 import { attachChangeStats } from '../../git/change-stats.ts'
 import { attachPrStatus } from '../../git/pr.ts'
 import { updateStatus } from '../../host/autoupdate.ts'
+import { readConductorStatus } from '../../host/conductor-status.ts'
 import type { SearchWorkspace } from '../../reads/types.ts'
 import { isRoute, routes } from '../../routes.ts'
 
@@ -13,7 +14,7 @@ import { scrubWorkflowSecrets } from '../../shared.ts'
 
 import { isToolUsageRange } from '../../usage/tool-usage.ts'
 
-import type { DelegationError, RolesConfig } from '../../wire.ts'
+import type { ConnectionResponse, DelegationError, RolesConfig } from '../../wire.ts'
 
 import { describeActuator } from '../../writes/actuator.ts'
 import { NOT_HANDLED, type RouteHandler } from '../router-types.ts'
@@ -61,6 +62,21 @@ export function createStateRoutes(
 	} = services
 	return async (req, res, url) => {
 		const { pathname } = url
+
+		// GET /api/connection — why a send would or would not land, without touching Conductor's UI:
+		// a process list, the window server and the lock probe. It is the phone's answer to
+		// "is it me, the Mac, or Conductor", which /api/state cannot give while the relay is up.
+		if (isRoute(routes.connection, req.method, pathname)) {
+			const [status, actuatorInfo] = await Promise.all([readConductorStatus(), describeActuator(actuator)])
+			return json(req, res, 200, {
+				relay: 'ok',
+				conductor: { running: status.running, windows: status.windows, locked: status.locked },
+				reason: status.reason,
+				sendReady: status.reason === 'ok' && actuatorInfo.available,
+				actuator: actuatorInfo,
+				version: updateStatus().current
+			} satisfies ConnectionResponse)
+		}
 
 		// GET /api/state — workspace list with active-session status
 		if (isRoute(routes.state, req.method, pathname)) {

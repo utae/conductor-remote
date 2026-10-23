@@ -39,6 +39,7 @@ import type { DevServerForward, DevServerResult, DevServerState } from './dev-se
 import type { UpdateStatus } from './host/autoupdate.ts'
 import type { LogEntry, LogFileInfo } from './host/logbuf.ts'
 import type { NoSleepState } from './host/nosleep.ts'
+import type { ExposeMode } from './host/tailscale.ts'
 import type { DeviceInfo } from './notifications/notify.ts'
 import type { DraftAttachment, Prefs, SyncedDraft } from './prefs.ts'
 import type { ClosedSession, Workspace as ReadWorkspace, RepoRow, SearchWorkspace, SessionRow } from './reads/types.ts'
@@ -898,6 +899,8 @@ export interface SettingsResponse {
 	nosleep: NoSleepStatus
 	/** Is the lock screen up right now — `null` when the probe itself couldn't say. */
 	screenLocked: boolean | null
+	/** Who can reach this relay: `public` is any browser holding the token, `tailnet` only tailnet devices. */
+	expose: ExposeMode
 }
 
 /** GET/PATCH /api/prefs — the host's durable copy of local-first PWA state. */

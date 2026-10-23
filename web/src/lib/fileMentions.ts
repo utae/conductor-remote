@@ -11,7 +11,7 @@ import { isPreviewableImage, isPreviewableSource } from '../../../src/shared.ts'
  * the spelling people actually use.
  *
  * The rule that keeps it from linking prose is **a mention must name a file that is
- * really there**. Inline code holds far more than paths — `yarn build`, `sessions.status`,
+ * really there**. Inline code holds far more than paths — `pnpm build`, `sessions.status`,
  * `Array.map` — so an extension test alone would underline half the transcript and open
  * a "not found" sheet on each one. A relative mention is matched against the worktree's
  * own file list (`GET /api/workspaces/:id/files`), and an ambiguous one links nowhere:

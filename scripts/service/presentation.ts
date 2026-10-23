@@ -40,7 +40,7 @@ export function printUrl(loopbackPort: string = RELAY_PORT): void {
 	// Nothing fronting yet — the relay is only on loopback.
 	console.info(`\n  Local URL:\n    http://127.0.0.1:${loopbackPort}/${frag}`)
 	console.info(
-		`\n  ⚠ Not reachable from your phone yet. Run \`yarn deploy\` (it picks a free port), or by hand \`tailscale funnel --bg ${loopbackPort}\` (public) / \`tailscale serve --bg ${loopbackPort}\` (tailnet)${dns ? ` → https://${dns}/` : ''}, then \`yarn service status\`.`
+		`\n  ⚠ Not reachable from your phone yet. Run \`pnpm run deploy\` (it picks a free port), or by hand \`tailscale funnel --bg ${loopbackPort}\` (public) / \`tailscale serve --bg ${loopbackPort}\` (tailnet)${dns ? ` → https://${dns}/` : ''}, then \`pnpm service status\`.`
 	)
 }
 

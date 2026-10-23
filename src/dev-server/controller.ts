@@ -59,7 +59,7 @@ import type {
 export const exec = promisify(execFile)
 
 // Keep the receipt additive and version-1-readable: an installed relay and a
-// source `yarn dev` relay can briefly share this file during an update.
+// source `pnpm dev` relay can briefly share this file during an update.
 const STORE_VERSION = 1
 
 const PREVIEW_ADVERTISEMENT_VERSION = 1
@@ -415,7 +415,7 @@ export class DevServerController {
 		for (const [key, record] of [...this.records]) {
 			try {
 				if (record.basePort) this.ports.set(record.workspaceId, record.basePort)
-				// `yarn dev` runs another relay beside the installed LaunchAgent. A
+				// `pnpm dev` runs another relay beside the installed LaunchAgent. A
 				// node --watch restart must not steal the installed relay's live bridge
 				// merely because both instances share the same state directory.
 				if (record.ownerPid !== process.pid && (await bridgeMatches(record))) continue

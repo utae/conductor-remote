@@ -82,7 +82,7 @@ export async function install(): Promise<void> {
 		process.exit(1)
 	}
 	if (!distBuilt()) {
-		console.error('✗ dist/ not built. Run `yarn build` first (or use `yarn deploy`, which builds).')
+		console.error('✗ dist/ not built. Run `pnpm build` first (or use `pnpm run deploy`, which builds).')
 		process.exit(1)
 	}
 	await assertPortsUsable()
@@ -133,7 +133,7 @@ export async function install(): Promise<void> {
 	ensureVoiceFunnel()
 	printUrl()
 	console.info(
-		'\n  Note: a node version change (nvm) invalidates the baked path — re-run `yarn deploy` after upgrading node.'
+		'\n  Note: a node version change (nvm) invalidates the baked path — re-run `pnpm run deploy` after upgrading node.'
 	)
 	console.info(
 		'  Note: the AppleScript write path needs Accessibility permission granted to this node binary (System Settings ▸ Privacy).'

@@ -27,7 +27,7 @@ export function isUiCapableRelayArgs(args: string): boolean {
 	if (/\bconductor-remote(?:\/bin\/cli\.js)?\s+(?:mcp|service|config|logs|nosleep)(?:\s|$)/.test(normalized)) {
 		return false
 	}
-	// `yarn start` and the documented checkout command can leave the script path
+	// `pnpm start` and the documented checkout command can leave the script path
 	// relative in `ps` (for example `node bin/cli.js`). Treat a whitespace or path
 	// separator as the same token boundary. Utility subcommands are excluded first
 	// so a relative MCP proxy can never be mistaken for a UI-driving relay.

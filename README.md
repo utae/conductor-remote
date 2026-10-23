@@ -123,7 +123,7 @@ type-stripping), with Drizzle and Zod defining and validating its owned database
 
 ## Requirements
 
-- Node ≥ 24. ([Yarn](https://yarnpkg.com) — Berry, the repo pins `yarn@4` — is
+- Node ≥ 24. ([pnpm](https://pnpm.io) — the repo pins it via `packageManager` — is
   only needed to run from source; the published package installs with plain npm.)
 - Conductor running on the same Mac.
 - [Tailscale](https://tailscale.com) on the Mac and the phone (or any shared
@@ -140,13 +140,13 @@ needs neither a clone nor a build):
 ```bash
 git clone https://github.com/hyldmo/conductor-remote.git
 cd conductor-remote
-yarn install
-yarn build          # builds the PWA into dist/
-yarn start          # serves dist/ + the API (node bin/cli.js)
+pnpm install
+pnpm build          # builds the PWA into dist/
+pnpm start          # serves dist/ + the API (node bin/cli.js)
 ```
 
-Or in one step: `yarn preview` (build + start). For live development with HMR,
-`yarn dev` runs Vite (`:5173`, proxying `/api`) alongside the relay in a
+Or in one step: `pnpm preview` (build + start). For live development with HMR,
+`pnpm dev` runs Vite (`:5173`, proxying `/api`) alongside the relay in a
 [numux](https://github.com/hyldmo/numux) TUI — one tab each, `numux.config.ts`
 picks the ports (needs [Bun](https://bun.sh) on PATH). Open the URL the relay tab
 prints: it points at Vite's origin and carries the token, which Vite can't print.
@@ -178,26 +178,26 @@ nothing to host in the cloud. "Deployment" here means installing it as a macOS
 **LaunchAgent** that starts on login and restarts if it dies:
 
 ```bash
-yarn deploy            # build dist/ + install & start the LaunchAgent, prints the phone URL
-yarn service status    # state + pid + phone URL
-yarn service restart   # e.g. after Tailscale comes up late, or a code change
-yarn service uninstall # tear it down
+pnpm run deploy            # build dist/ + install & start the LaunchAgent, prints the phone URL
+pnpm service status    # state + pid + phone URL
+pnpm service restart   # e.g. after Tailscale comes up late, or a code change
+pnpm service uninstall # tear it down
 ```
 
 From a global install the same commands are `conductor-remote service
 <status|restart|uninstall>` (and `conductor-remote service install` in place of
-`yarn deploy`, since `dist/` ships prebuilt in the package).
+`pnpm run deploy`, since `dist/` ships prebuilt in the package).
 
 The token is now **persisted** (`~/Library/Application Support/conductor-remote/token`),
 so the home-screen URL stays valid across restarts and reboots. Logs land in
 `~/Library/Logs/conductor-remote/`. Two caveats: the agent bakes the absolute
-`node` path at install time — re-run `yarn deploy` after an nvm node upgrade —
+`node` path at install time — re-run `pnpm run deploy` after an nvm node upgrade —
 and the AppleScript write path needs Accessibility permission granted to that
 `node` binary (System Settings ▸ Privacy & Security ▸ Accessibility).
 
 ### Config (env / flags)
 
-Each knob is an env var (honored by `yarn start` and `service install`) and, for
+Each knob is an env var (honored by `pnpm start` and `service install`) and, for
 `service install`, the CLI flag in the second column. A flag wins over the ambient
 env. `EXPOSE`/`--expose` is documented under Install above.
 
@@ -242,7 +242,7 @@ working across restarts without any env var. To pin a specific secret (e.g. to
 share a known URL), set `RELAY_TOKEN`:
 
 ```bash
-RELAY_TOKEN=$(openssl rand -hex 16) yarn start
+RELAY_TOKEN=$(openssl rand -hex 16) pnpm start
 ```
 
 ## What works today
@@ -508,7 +508,7 @@ link right under the switch to prove the path end to end.
 **On iPhone/iPad you must add the app to your Home Screen first** — iOS only
 exposes notifications to installed web apps, never to a Safari tab. The switch
 says so if you haven't. The connection also has to be `https://` (the Tailscale
-URL `yarn deploy` sets up, or `127.0.0.1` locally); a plain LAN IP is not a
+URL `pnpm run deploy` sets up, or `127.0.0.1` locally); a plain LAN IP is not a
 secure context and browsers refuse push there.
 
 Under the hood: standard Web Push (VAPID + `aes128gcm`), implemented directly on

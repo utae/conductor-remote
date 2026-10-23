@@ -1,14 +1,14 @@
 import net from 'node:net'
 import { defineConfig } from 'numux'
 
-// `yarn dev` — the Vite dev server (HMR PWA) and the relay (API + reads) in one TUI.
+// `pnpm dev` — the Vite dev server (HMR PWA) and the relay (API + reads) in one TUI.
 // Vite proxies /api → the relay so the phone hits a single origin.
 //
 // Dev-only per-workspace ports: inside a Conductor workspace, $CONDUCTOR_PORT is
-// unique per workspace, so several `yarn dev`s can run concurrently. Vite (the
+// unique per workspace, so several `pnpm dev`s can run concurrently. Vite (the
 // origin a browser/phone opens) takes that port; the relay gets a free ephemeral
 // port and Vite proxies /api to it on loopback. Outside Conductor, fall back to
-// the classic 5173 (web) / 8787 (relay) pair. Prod (`yarn start`/`deploy`/the
+// the classic 5173 (web) / 8787 (relay) pair. Prod (`pnpm start`/`deploy`/the
 // LaunchAgent) never runs through here, so its Tailscale bind and RELAY_PORT
 // default stay untouched — this clutters neither the prod path nor the build.
 //
@@ -57,7 +57,7 @@ export default defineConfig({
 			color: 'cyan'
 		},
 		web: {
-			command: 'yarn dev:web',
+			command: 'pnpm dev:web',
 			env: { WEB_PORT: String(webPort), RELAY_PORT: String(relayPort) },
 			color: 'magenta'
 		}

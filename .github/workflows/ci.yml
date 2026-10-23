@@ -17,22 +17,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: yarn
-      # corepack (above) provides the pinned yarn@4. devDeps carry tsc + biome +
+          cache: pnpm
+      # corepack (above) provides the pinned pnpm. devDeps carry tsc + biome +
       # the Vite toolchain; the published package itself has zero runtime deps.
       # (Build scripts stay disabled — sharp's native binary is only for gen:icons.)
-      - run: yarn install --immutable
-      - run: yarn verify
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify
       # Build here too: it's the only thing that exercises the React/PWA side,
       # and `prepack` runs the same build at publish time.
-      - run: yarn build
+      - run: pnpm build
 
   # The compile half of check:applescript needs osacompile, which only exists on
   # macOS — on ubuntu it skips, so a stray quote in src/writes/applescript/
   # would ship and surface for the first time as a failed send on someone's
   # phone. This job parses the assembled program the way osascript will. It's kept
   # lean on purpose: the check script is stdlib-only and runs under plain node
-  # (default type-stripping), so there is no corepack, no yarn install — a
+  # (default type-stripping), so there is no corepack, no pnpm install — a
   # checkout and node 24 are the whole cost of the macOS runner.
   check-applescript:
     runs-on: macos-latest
@@ -58,9 +58,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: yarn
-      - run: yarn install --immutable
-      - run: yarn commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.event.pull_request.head.sha }}" --verbose
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.event.pull_request.head.sha }}" --verbose
 
   release:
     # check-applescript gates the release too: the tarball ships the AppleScript
@@ -81,13 +81,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: yarn
-      - run: yarn install --immutable
-      - run: yarn build
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
       # No NPM_TOKEN: @semantic-release/npm exchanges the GitHub OIDC id-token for a
       # short-lived publish token (npm Trusted Publishing). Requires a trusted
       # publisher for this package on npmjs.com → repo hyldmo/conductor-remote,
       # workflow ci.yml. Provenance is generated automatically.
-      - run: yarn semantic-release
+      - run: pnpm exec semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

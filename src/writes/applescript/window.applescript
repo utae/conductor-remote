@@ -4,7 +4,7 @@
 	Loaded verbatim by src/writes.ts, which appends a few lines naming the
 	handlers to run and hands the result to `osascript`. It lives in its own file
 	rather than a TypeScript template literal for three reasons: an editor can
-	highlight it, `yarn verify` can compile-check it (scripts/check-applescript.ts,
+	highlight it, `pnpm verify` can compile-check it (scripts/check-applescript.ts,
 	the repository validator for this language), and a backtick in a comment
 	no longer terminates the string it used to sit inside — so this sentence,
 	which contains `one`, is now harmless.

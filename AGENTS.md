@@ -1926,3 +1926,47 @@ pnpm service  # {status,restart,uninstall} the LaunchAgent
 - **Utility scripts** run under plain `node` (default type-stripping), stdlib-only —
   keep them strip-clean too (no param-property constructors/enums/namespaces).
 - **Commit author** is the GitHub noreply address (privacy) — keep it for public commits.
+
+## Shipping a change (the fork's Mac)
+
+Applies only where the login service is installed: `launchctl list` shows
+`no.adluna.conductor-remote`. Anywhere else, stop after the PR is open. The service runs from the
+**main checkout** (the first path `git worktree list` prints), not from a workspace, and merging
+changes nothing there until it is updated.
+
+- **Open against `main`, turn on auto-merge, then watch it.**
+  `gh pr create --repo utae/conductor-remote --base main …`, then `gh pr merge <n> --auto --squash`.
+  Squash is the only method the repo allows. `main` requires `check`, `check-applescript` and
+  `commitlint` and **no review**, so green CI is the whole gate: run `pnpm verify` on Node 24
+  (`.nvmrc`) before opening, and put what was *not* verified in the PR body.
+- **In a stack, only a PR whose base is `main` gets auto-merge.** On an upper PR it merges into its
+  parent's branch, which is how #10–#14 all read "merged" and none reached `main`. Once the PR below
+  has merged: `git rebase --onto origin/main <old base> <branch>`, `git push --force-with-lease`,
+  `gh pr edit <n> --base main`, and only then `--auto`.
+- **"Merged" means into `main`:** the PR's base is `main` and its merge commit is reachable from
+  `origin/main`. Poll `gh pr view <n> --json state,baseRefName,mergeCommit` from a background loop at
+  1–2 minute intervals, not a foreground sleep, and stop watching after an hour with a report.
+- **CI failure: read the failed log before doing anything.**
+  - Cancelled, a runner fault, or a test that passes on a sibling PR with the same code:
+    `gh run rerun <run> --failed`, at most twice (`orchestration-process-fault` and a cancelled
+    `check-applescript` have both done this once).
+  - A real failure: fix it, push a commit, and let auto-merge carry on.
+  - **Never get to green by weakening the check**: no deleting or skipping a test, loosening an
+    assertion, editing `.github/workflows` or branch protection, `--no-verify`, or an admin merge.
+  - After three fix attempts for one failure, or a failure you cannot attribute, stop and report it
+    with the log excerpt instead of trying a fourth.
+- **After the merge, put it on the service straight away, without asking:** in the main checkout,
+  under Node 24, `node bin/cli.js service update`. It refuses a non-`main` branch, a dirty tree and a missing
+  `origin`, and it does not restart after a failed install or build, so a refusal is a result to
+  report, never a reason to work around it. Restarting the relay does not stop agents (Conductor owns
+  them); it drops phone connections for a few seconds.
+  - `update` ends by printing the phone URL **with the token** and a QR. Pipe it through
+    `sed -E 's/(token=)[^&[:space:]]+/\1<redacted>/g'` and drop the QR lines; never paste either.
+  - Then confirm: `GET /api/connection` with the admin token (read it from the state directory into
+    a shell variable, never print it) answers `reason: ok`. Say so, or say what it answered instead.
+- **There is no background updater.** Nothing pulls `main` on a timer, by design: the watching above
+  is the whole mechanism, so a merge that lands while no session is watching waits for the next one.
+  **If the session ends before the merge**, the next one starts with `gh pr list --state open --author @me`
+  and `node bin/cli.js service update --check`, so a merge nobody was watching is not forgotten.
+- A PR that edits this section does not get auto-merge: it changes what agents do unattended, so it
+  takes effect only after a person merges it.

@@ -32,3 +32,19 @@ export function parseTokenInput(raw: string): string | null {
 	if (m) return decodeURIComponent(m[1])
 	return /\s/.test(s) ? null : s
 }
+
+/**
+ * The id of the paired device a token belongs to, or null for the shared token. A device token is
+ * `<12 hex>.<secret>` (src/auth/devices.ts) and the shared one never contains a dot, so the shape alone
+ * tells them apart. The id is not secret — it is what `conductor-remote devices revoke <id>` takes.
+ */
+export function deviceIdFromToken(token: string | null): string | null {
+	const match = token?.match(/^([0-9a-f]{12})\.[A-Za-z0-9_-]+$/)
+	return match ? match[1] : null
+}
+
+/** A name for this phone in the Mac's device list, from the user agent's model ("SM-S931N") or a plain "Phone". */
+export function deviceNameGuess(userAgent: string): string {
+	const model = userAgent.match(/Android [\d.]+; ([^;)]+?)(?: Build|[;)])/)?.[1]?.trim()
+	return model ? model.slice(0, 40) : 'Phone'
+}

@@ -12,5 +12,8 @@ coverage/
 # browser-test artifacts
 .playwright-mcp/
 
+# oh-my-claudecode: per-workspace agent state
+.omc/
+
 # Conductor: personal per-workspace overrides (shared settings.toml is committed)
 .conductor/settings.local.toml

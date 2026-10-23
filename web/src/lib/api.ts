@@ -38,6 +38,7 @@ import type {
 	NewChatResult,
 	NoSleepResult,
 	OpenAIRealtimeVoice,
+	PairDeviceResponse,
 	PlanUsageResponse,
 	Prefs,
 	PrefsResponse,
@@ -234,6 +235,29 @@ export const client = {
 			body: JSON.stringify(config)
 		}),
 	state: () => api<StateResponse>(routes.state.path()),
+	/**
+	 * Trade a pairing code from the Mac for this phone's own token. The one call made *without* a
+	 * credential — there is none yet — so it does not go through `api()`, which would send an empty bearer.
+	 */
+	pairDevice: async (code: string, name: string): Promise<PairDeviceResponse> => {
+		let res: Response
+		try {
+			res = await fetch(routes.pairDevice.path(), {
+				method: routes.pairDevice.method,
+				signal: AbortSignal.timeout(POLL_TIMEOUT_MS),
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ code, name })
+			})
+		} catch (err) {
+			if (err instanceof DOMException && err.name === 'TimeoutError') throw new ApiError('Request timed out', 0)
+			throw err
+		}
+		if (!res.ok) {
+			const body = (await res.json().catch(() => ({}))) as { error?: unknown }
+			throw new ApiError(responseErrorMessage(body.error, `HTTP ${res.status}`), res.status)
+		}
+		return res.json() as Promise<PairDeviceResponse>
+	},
 	/** Why a send would or would not land right now: the Mac's lock, Conductor's process and window. */
 	connection: () => api<ConnectionResponse>(routes.connection.path()),
 	/** Mint a short-lived native-call URI using the same bearer this PWA already holds. */

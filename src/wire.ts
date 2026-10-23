@@ -23,6 +23,7 @@
 
 import type { DefaultEfforts } from './agents/conductor-settings.ts'
 import type { CachedModelGroup } from './agents/model-cache.ts'
+import type { DeviceInfo as PairedDevice } from './auth/devices.ts'
 import type { FirstPrompt } from './delivery/firstprompt.ts'
 import type { ParkedPrompt } from './delivery/parked.ts'
 
@@ -475,6 +476,12 @@ export interface ConnectionResponse {
 	sendReady: boolean
 	actuator: ActuatorInfo
 	version?: string
+}
+
+/** POST /api/devices/pair — the token is shown once, here, and only its hash is kept on the Mac. */
+export interface PairDeviceResponse {
+	device: PairedDevice
+	token: string
 }
 
 /** One workspace a search matched, with the chat evidence and the tab title to show. */

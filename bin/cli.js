@@ -65,6 +65,9 @@ function usage() {
 			'  conductor-remote config                  show the daemon configuration and each value source',
 			'      config set <setting> <value>          persist one setting and restart the relay',
 			'  conductor-remote logs [-n N] [--no-follow]  tail the running relay’s logs (follows by default)',
+			'  conductor-remote devices [list]          paired phones; each has its own revocable credential',
+			'      devices pair                         print a one-time code a phone trades for its token',
+			'      devices revoke <id>                  cut one device off at its next request',
 			'  conductor-remote nosleep [duration]      keep this Mac awake until Ctrl-C or the duration',
 			'      nosleep setup [--uninstall]          one-time install so it stops asking for a',
 			'                                           password (root helper + scoped sudoers rule)',
@@ -114,6 +117,11 @@ switch (cmd) {
 		// `set <name> <value>` when present so reads and writes use the same source.
 		process.argv = [process.argv[0], process.argv[1], 'config', ...rest]
 		await import(resolveEntry('../dist-node/scripts/service.js', '../scripts/service.ts'))
+		break
+	case 'devices':
+		// devices.ts reads its subcommand from argv[2]; re-shape argv so `devices revoke <id>` → `revoke <id>`.
+		process.argv = [process.argv[0], process.argv[1], ...rest]
+		await import(resolveEntry('../dist-node/scripts/devices.js', '../scripts/devices.ts'))
 		break
 	case 'logs':
 		// `logs` is a service.ts subcommand; re-shape argv so its argv[2] is `logs` (mirrors the `service` case).

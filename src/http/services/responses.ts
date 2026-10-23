@@ -4,11 +4,13 @@ import type http from 'node:http'
 
 import zlib from 'node:zlib'
 
+import { type DeviceInfo, DeviceStore } from '../../auth/devices.ts'
 import { scrubWorkflowSecrets, withoutClientWindowEvidence } from '../../shared.ts'
 import type { BaseServices } from './base.ts'
 
-export function createResponsesServices(services: Pick<BaseServices, 'cfg'>) {
+export function createResponsesServices(services: Pick<BaseServices, 'cfg'> & { devices?: DeviceStore }) {
 	const { cfg } = services
+	const devices = services.devices ?? new DeviceStore()
 
 	/** Per-file ceiling for a relay exposed through Tailscale Funnel. Large media belongs in a link. */
 	const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
@@ -79,11 +81,56 @@ export function createResponsesServices(services: Pick<BaseServices, 'cfg'>) {
 		return a.length === b.length && crypto.timingSafeEqual(a, b)
 	}
 
+	/** The shared token only — the admin credential. MCP and anything that must never see a device token use this. */
 	function authed(req: http.IncomingMessage): boolean {
 		const auth = req.headers.authorization
 		if (auth?.startsWith('Bearer ')) return tokenEq(auth.slice('Bearer '.length))
 		const url = new URL(req.url ?? '/', 'http://x')
 		return tokenEq(url.searchParams.get('token'))
+	}
+
+	/**
+	 * Who is asking: the admin (shared token) or one paired device, else null. A device token is
+	 * accepted from the Authorization header only — a query string lands in proxy and Funnel
+	 * access logs, and a credential that can be revoked per device is not worth leaking that way.
+	 */
+	function authenticate(req: http.IncomingMessage): { kind: 'admin' } | { kind: 'device'; device: DeviceInfo } | null {
+		if (authed(req)) return { kind: 'admin' }
+		const auth = req.headers.authorization
+		if (!auth?.startsWith('Bearer ')) return null
+		const device = devices.verify(auth.slice('Bearer '.length))
+		return device ? { kind: 'device', device } : null
+	}
+
+	/** Failed pairings in the last minute, kept in memory: a restart forgiving them costs nothing a 72-bit code cannot absorb. */
+	const pairFailures: number[] = []
+	const PAIR_FAILURE_LIMIT = 10
+	const PAIR_FAILURE_WINDOW_MS = 60_000
+
+	/** POST /api/devices/pair { code, name? } — unauthenticated by necessity, so it is throttled by failure. */
+	async function pairDevice(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+		const now = Date.now()
+		while (pairFailures.length && now - pairFailures[0] > PAIR_FAILURE_WINDOW_MS) pairFailures.shift()
+		if (pairFailures.length >= PAIR_FAILURE_LIMIT) {
+			res.setHeader('retry-after', '60')
+			return void json(req, res, 429, { error: 'too many failed pairing attempts; wait a minute' })
+		}
+		let body: { code?: unknown; name?: unknown }
+		try {
+			body = JSON.parse((await readBody(req)) || '{}')
+		} catch {
+			return void json(req, res, 400, { error: 'invalid JSON' })
+		}
+		const paired =
+			typeof body.code === 'string' && body.code
+				? devices.pair(body.code, typeof body.name === 'string' ? body.name : '')
+				: null
+		if (!paired) {
+			pairFailures.push(now)
+			return void json(req, res, 401, { error: 'invalid or expired pairing code' })
+		}
+		console.info(`[auth] paired device ${paired.device.id} (${paired.device.name})`)
+		return void json(req, res, 200, paired)
 	}
 
 	async function readBody(req: http.IncomingMessage): Promise<string> {
@@ -121,6 +168,17 @@ export function createResponsesServices(services: Pick<BaseServices, 'cfg'>) {
 			return null
 		}
 	}
-	return { json, authed, readBody, forTheClient, attachmentHeaderName, readAttachmentBody, PayloadTooLargeError }
+	return {
+		json,
+		authed,
+		authenticate,
+		pairDevice,
+		devices,
+		readBody,
+		forTheClient,
+		attachmentHeaderName,
+		readAttachmentBody,
+		PayloadTooLargeError
+	}
 }
 export type ResponsesServices = ReturnType<typeof createResponsesServices>

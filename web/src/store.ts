@@ -197,7 +197,8 @@ interface AppState {
 		queue?: boolean
 		workflow?: boolean
 	}) => void
-	failPending: (id: string, error: string) => void
+	/** `unsure`: the relay never answered, so the prompt may have landed (see `answerWasLost`). */
+	failPending: (id: string, error: string, unsure?: boolean) => void
 	removePending: (id: string) => void
 	/** Reuse an uncertain attempt; rotate only when the canonical target/objective changes. */
 	workflowClientId: (key: string, fingerprint: string) => string
@@ -296,8 +297,10 @@ export const useApp = create<AppState>((set, get) => {
 				...get().pending.filter(p => p.id !== m.id),
 				{ ...m, status: 'sending', error: undefined, createdAt: Date.now() }
 			]),
-		failPending: (id, error) =>
-			savePending(get().pending.map(p => (p.id === id ? { ...p, status: 'error', error } : p))),
+		failPending: (id, error, unsure = false) =>
+			savePending(
+				get().pending.map(p => (p.id === id ? { ...p, status: 'error', error, unsure: unsure || undefined } : p))
+			),
 		removePending: id => savePending(get().pending.filter(p => p.id !== id)),
 		workflowClientId: (key, fingerprint) => {
 			const current = get().workflowClientAttempts[key]

@@ -9,6 +9,7 @@ import {
 	tailLogFile
 } from '../../host/logbuf.ts'
 import { armNoSleep, disarmNoSleep, MAX_SECONDS as NOSLEEP_MAX_SECONDS, nosleepState } from '../../host/nosleep.ts'
+import { readExposeMode } from '../../host/tailscale.ts'
 import { autoJoinHotspotMode, currentSsid, looksLikeHotspot, preferredNetworks } from '../../host/wifi.ts'
 import { notifyDevice, pushConfig, subscribeDevice, unsubscribeDevice } from '../../notifications/notify.ts'
 import { readPrefs, writePrefs } from '../../prefs.ts'
@@ -60,7 +61,8 @@ export function createSystemRoutes(
 					autoJoinHotspot
 				},
 				nosleep: { ...nosleep, maxSeconds: NOSLEEP_MAX_SECONDS },
-				screenLocked: locked
+				screenLocked: locked,
+				expose: readExposeMode()
 			})
 		}
 

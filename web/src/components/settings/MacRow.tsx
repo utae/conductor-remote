@@ -241,6 +241,12 @@ export function MacRow() {
 					The Mac is locked right now, so writes park until it’s unlocked. <UnlockLink />
 				</p>
 			) : null}
+			{data?.expose === 'public' ? (
+				<p className="text-xs text-del">
+					This relay is on the public internet; anyone holding the token can reach it. Redeploy with `--expose tailnet`
+					to limit it to your tailnet.
+				</p>
+			) : null}
 
 			<div className="border-t border-border pt-2.5">
 				<div className="flex items-center justify-between gap-3">

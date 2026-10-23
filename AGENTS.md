@@ -1943,6 +1943,11 @@ changes nothing there until it is updated.
   parent's branch, which is how #10–#14 all read "merged" and none reached `main`. Once the PR below
   has merged: `git rebase --onto origin/main <old base> <branch>`, `git push --force-with-lease`,
   `gh pr edit <n> --base main`, and only then `--auto`.
+- **When building a stack, check where it bottoms out.** Before opening a PR on a parent branch, follow
+  the `baseRefName` chain down (`gh pr view <n> --json baseRefName`, then the PR whose head is that
+  branch, and so on) and confirm the lowest PR's base is `main`. A stack whose bottom targets another
+  branch can be merged top to bottom, every PR reading "merged", with nothing on `main`. If the chain
+  does not end at `main`, retarget the lowest PR first and say so.
 - **"Merged" means into `main`:** the PR's base is `main` and its merge commit is reachable from
   `origin/main`. Poll `gh pr view <n> --json state,baseRefName,mergeCommit` from a background loop at
   1–2 minute intervals, not a foreground sleep, and stop watching after an hour with a report.

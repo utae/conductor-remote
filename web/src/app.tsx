@@ -50,7 +50,7 @@ function Shell() {
 	const drawerRef = useRef<HTMLElement>(null)
 	const { data } = useWorkspaces()
 	useEdgeSwipeDrawer(drawerRef)
-	// Android back: open the drawer when it is closed, leave the app when it is open.
+	// Android back, on a chat: open the drawer when it is closed, leave the app when it is open.
 	useBackButton()
 	// A tapped notification arrives as a message from the service worker, on whichever
 	// screen the app happens to be showing — so the listener lives with the router.

@@ -1,16 +1,18 @@
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useMatch } from 'react-router'
 import { ApiError } from '../lib/api.ts'
-import { BackGuard, isPhoneLayout } from '../lib/back-guard.ts'
+import { BackGuard, isPhoneLayout, wantsBackGuard } from '../lib/back-guard.ts'
 import { hasSelection, overSelection } from '../lib/selection.ts'
 import { useApp } from '../store.ts'
 
 /**
- * Android's back button and back swipe: drawer closed → open it, drawer open → leave the app. The mechanism
- * and why navigation must `replace` on a phone are in `lib/back-guard.ts`. A no-op from `md` up, where the
- * rail is always there and back is the browser's own.
+ * Android's back button and back swipe, on a chat only: drawer closed → open it, drawer open → leave the app.
+ * Every other screen keeps the browser's own back. The mechanism and why navigation must `replace` on a phone
+ * are in `lib/back-guard.ts`. A no-op from `md` up, where the rail is always there.
  */
 export function useBackButton() {
+	const onChat = useMatch('/w/:workspaceId') !== null
 	const open = useApp(s => s.sidebarOpen)
 	const setSidebarOpen = useApp(s => s.setSidebarOpen)
 	const [phone, setPhone] = useState(isPhoneLayout)
@@ -37,8 +39,9 @@ export function useBackButton() {
 	}, [])
 
 	useEffect(() => {
-		guard.current?.sync(phone && !open)
-	}, [phone, open])
+		if (onChat) guard.current?.sync(wantsBackGuard({ phone, open, onChat }))
+		else guard.current?.release()
+	}, [phone, open, onChat])
 }
 
 /**

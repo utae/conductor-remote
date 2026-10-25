@@ -1,6 +1,7 @@
 /**
- * What Android's back button (and its edge swipe) does here: with the workspace drawer closed it opens the
- * drawer, and with the drawer open it leaves the app.
+ * What Android's back button (and its edge swipe) does here: on a chat, with the workspace drawer closed it
+ * opens the drawer, and with the drawer open it leaves the app. On any other screen the guard is not there and
+ * back is the browser's own.
  *
  * A web page cannot see the button, only the history it pops. So the drawer being closed is what puts one
  * extra history entry of ours on top of the stack, and popping it is the "open the drawer" press. While the
@@ -60,6 +61,15 @@ export class BackGuard {
 		}
 	}
 
+	/**
+	 * The screen changed to one the guard does not cover. Forget our entry without touching the history: the
+	 * navigation that got us here has already replaced or buried it, and a `back()` now would pop the router
+	 * back onto the chat it just left.
+	 */
+	release(): void {
+		this.armed = false
+	}
+
 	/** Wire to `popstate`. A press pops our entry: the drawer opens and nothing is pushed back. */
 	onPopState(): void {
 		if (this.ignored > 0) {
@@ -70,6 +80,11 @@ export class BackGuard {
 		this.armed = false
 		this.onBack()
 	}
+}
+
+/** Whether the guard's entry belongs on the stack: a phone, on a chat, with the drawer closed. */
+export function wantsBackGuard(state: { phone: boolean; open: boolean; onChat: boolean }): boolean {
+	return state.phone && state.onChat && !state.open
 }
 
 /** The drawer is a floating overlay below Tailwind's `md`; from there up the rail is static and back is the browser's. */

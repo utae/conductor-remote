@@ -4,8 +4,9 @@ on tabGroups()
 	-- has one (the chat strip and the terminal strip are siblings). Bounded: the
 	-- pane sits ~5 levels down, and we must never descend into the transcript.
 	my requireWindow()
+	set mainIdx to my mainWindowIndex()
 	tell application "System Events" to tell process "Conductor"
-		set level to {window 1}
+		set level to {window mainIdx}
 		set depth to 0
 		repeat while (count of level) > 0 and depth < 8
 			set found to {}

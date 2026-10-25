@@ -1,3 +1,4 @@
+import { listSkillsCached } from '../../files/skills.ts'
 import { listSourceFiles, workspaceDiff, workspaceFileDiff } from '../../git/diff.ts'
 
 import { mergePr } from '../../git/merge.ts'
@@ -120,6 +121,16 @@ export function createWorkspacesRoutes(
 			if (!ws) return json(req, res, 404, { error: 'workspace not found' })
 			if (!ws.worktree) return json(req, res, 200, { files: [], truncated: false })
 			return json(req, res, 200, await listSourceFiles(ws.worktree))
+		}
+
+		// GET /api/workspaces/:id/skills — the `/` menu's list. User and plugin skills do not depend on the
+		// worktree, so a workspace whose folder is gone still gets them (and just no project ones).
+		const skillsOf = routeParam(routes.workspaceSkills, req.method, pathname)
+
+		if (skillsOf) {
+			const ws = reads.getWorkspace(skillsOf)
+			if (!ws) return json(req, res, 404, { error: 'workspace not found' })
+			return json(req, res, 200, { skills: listSkillsCached(ws.worktree ?? null) })
 		}
 
 		// POST /api/workspaces/:id/merge — merge the workspace's open PR (mirrors Conductor's merge button)

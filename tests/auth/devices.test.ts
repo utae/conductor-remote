@@ -150,6 +150,7 @@ describe('deviceMay', () => {
 		expect(deviceMay('phone', 'GET', '/api/workspaces/w1/sessions')).toBe(true)
 		expect(deviceMay('phone', 'GET', '/api/sessions/s1/messages')).toBe(true)
 		expect(deviceMay('phone', 'POST', '/api/sessions/s1/prompt')).toBe(true)
+		expect(deviceMay('phone', 'GET', '/api/workspaces/w1/skills')).toBe(true)
 	})
 
 	it('allows the read-only lookups the app makes by itself, but not the ones that do real work or write', () => {

@@ -83,7 +83,8 @@ import type {
 	WorkspaceDiff,
 	WorkspaceFileDiff,
 	WorkspaceFilesResponse,
-	WorkspaceResponse
+	WorkspaceResponse,
+	WorkspaceSkillsResponse
 } from './types.ts'
 
 export class ApiError extends Error {
@@ -350,6 +351,8 @@ export const client = {
 		api<WorkspaceFileDiff>(`${routes.fileDiff.path(workspaceId)}?path=${encodeURIComponent(path)}`),
 	/** Previewable worktree files for chat links and the diff window's All-files rail. */
 	workspaceFiles: (workspaceId: string) => api<WorkspaceFilesResponse>(routes.workspaceFiles.path(workspaceId)),
+	/** What a `/` in this workspace's composer can offer: skills and slash commands read off disk. */
+	workspaceSkills: (workspaceId: string) => api<WorkspaceSkillsResponse>(routes.workspaceSkills.path(workspaceId)),
 	/**
 	 * The relay retries a failed send itself (and confirms each try against the
 	 * transcript), hence the long budget. `agent` is the staged settings patch,

@@ -26,6 +26,7 @@ import type { CachedModelGroup } from './agents/model-cache.ts'
 import type { DeviceInfo as PairedDevice } from './auth/devices.ts'
 import type { FirstPrompt } from './delivery/firstprompt.ts'
 import type { ParkedPrompt } from './delivery/parked.ts'
+import type { SkillEntry } from './files/skills.ts'
 
 export type {
 	AutoModelConfig,
@@ -60,6 +61,7 @@ import type { ToolUsageSnapshot } from './usage/tool-usage.ts'
 import type { ActuatorInfo, SendResult as ActuatorSendResult } from './writes/types.ts'
 
 export type { RepoIcon } from './files/icons.ts'
+export type { SkillEntry } from './files/skills.ts'
 export type { DiffFile, DiffStats, WorkspaceDiff, WorkspaceFileDiff } from './git/diff.ts'
 export type { MergeMethod, MergeResult } from './git/merge.ts'
 export type { LogLevel } from './host/logbuf.ts'
@@ -600,6 +602,15 @@ export interface FilePreviewResponse {
 export interface WorkspaceFilesResponse {
 	files: string[]
 	truncated: boolean
+}
+
+/**
+ * GET /api/workspaces/:id/skills — what typing `/` in this workspace's composer can offer: the skills and
+ * slash commands on disk for its agent (project, user, enabled plugins, Conductor's own), by name with a
+ * one-line description. See `src/files/skills.ts` for what it reads and, as important, what it cannot.
+ */
+export interface WorkspaceSkillsResponse {
+	skills: SkillEntry[]
 }
 
 /**

@@ -173,6 +173,8 @@ export const routes = {
 	fileDiff: param('GET', '/api/workspaces/:workspaceId/diff/file'),
 	/** Previewable worktree files for chat links and the diff window's All-files rail. */
 	workspaceFiles: param('GET', '/api/workspaces/:workspaceId/files'),
+	/** Skills and slash commands the workspace's agent can be sent as `/name`, read off disk (src/files/skills.ts). */
+	workspaceSkills: param('GET', '/api/workspaces/:workspaceId/skills'),
 	merge: param('POST', '/api/workspaces/:workspaceId/merge'),
 	/** Keep this live workspace and its chats, but move its merged worktree onto a fresh branch. */
 	continueWorkspace: param('POST', '/api/workspaces/:workspaceId/continue'),

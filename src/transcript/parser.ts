@@ -9,7 +9,7 @@
  * plain-text rows. Never render an SDK user frame as a user bubble.
  */
 
-import { plural, scrubWorkflowSecrets } from '../shared.ts'
+import { normalizeNewlines, plural, scrubWorkflowSecrets } from '../shared.ts'
 
 export type { TranscriptElisions, TranscriptFormat } from '../shared.ts'
 export { renderTranscript, transcriptMessage, transcriptThrough } from '../shared.ts'
@@ -135,7 +135,7 @@ export function parseOutboxMessage(row: OutboxMessageRow): TranscriptEntry | nul
 		id: row.message_id,
 		rowid: 0,
 		role: 'user',
-		text: scrubWorkflowSecrets(text),
+		text: scrubWorkflowSecrets(normalizeNewlines(text)),
 		ts: row.created_at,
 		queued: true
 	}
@@ -302,7 +302,7 @@ export function parseMessage(row: RawRow, worktree: string | null = null): Trans
 	// Plain user prompt (not SDK JSON) — the only source of real user bubbles.
 	if (!content.startsWith('{')) {
 		if (!content.trim()) return []
-		return [scrubEntry({ ...base, id: row.id, role: 'user', text: content })]
+		return [scrubEntry({ ...base, id: row.id, role: 'user', text: normalizeNewlines(content) })]
 	}
 
 	let parsed: SdkFrame

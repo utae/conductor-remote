@@ -30,7 +30,9 @@ export function SlashMenu({
 	const activeRow = useRef<HTMLButtonElement>(null)
 	// Keep the highlighted row on screen as the arrow keys walk a list longer than the box.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: scrolls when the highlight moves
-	useEffect(() => activeRow.current?.scrollIntoView({ block: 'nearest' }), [active, items])
+	useEffect(() => {
+		activeRow.current?.scrollIntoView({ block: 'nearest' })
+	}, [active, items])
 
 	return (
 		<div

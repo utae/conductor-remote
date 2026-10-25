@@ -36,7 +36,9 @@ export const TranscriptHistory = memo(function TranscriptHistory({
 	// Fetching an older segment increases scrollHeight, not the scroller's height.
 	// Tell its owner after layout so a reader at the bottom stays with the composer.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: content/selection changes drive the layout notification
-	useLayoutEffect(() => onLayout?.(), [entries, transcript.loading, selectedAgent, onLayout])
+	useLayoutEffect(() => {
+		onLayout?.()
+	}, [entries, transcript.loading, selectedAgent, onLayout])
 
 	return (
 		<section data-chat-history={sessionId} aria-label="Previous conversation context">

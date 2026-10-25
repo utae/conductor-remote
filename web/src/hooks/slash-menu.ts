@@ -35,7 +35,9 @@ export function useSlashMenu(options: {
 
 	// A new query is a new list: start at the top rather than on a row that is no longer there.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: the highlight resets when the query changes, which the body does not read
-	useEffect(() => setActive(0), [query])
+	useEffect(() => {
+		setActive(0)
+	}, [query])
 
 	const pick = (skill: SkillEntry) => {
 		if (!token) return

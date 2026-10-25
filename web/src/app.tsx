@@ -7,7 +7,7 @@ import { TokenGate } from './components/settings/TokenGate.tsx'
 import { VoiceCallSheet } from './components/voice/VoiceCallSheet.tsx'
 import { VoiceCallProvider } from './components/voice/VoiceProvider.tsx'
 import { WorkspaceList } from './components/workspaces/WorkspaceList.tsx'
-import { useEdgeSwipeDrawer, useVisualViewportHeight } from './hooks/browser.ts'
+import { useBackButton, useEdgeSwipeDrawer, useVisualViewportHeight } from './hooks/browser.ts'
 import { usePrefsSync } from './hooks/preferences.ts'
 import { usePushRouting, usePushSync } from './hooks/push.ts'
 import { useWorkspaces } from './hooks/workspaces.ts'
@@ -50,6 +50,8 @@ function Shell() {
 	const drawerRef = useRef<HTMLElement>(null)
 	const { data } = useWorkspaces()
 	useEdgeSwipeDrawer(drawerRef)
+	// Android back: open the drawer when it is closed, leave the app when it is open.
+	useBackButton()
 	// A tapped notification arrives as a message from the service worker, on whichever
 	// screen the app happens to be showing — so the listener lives with the router.
 	usePushRouting()

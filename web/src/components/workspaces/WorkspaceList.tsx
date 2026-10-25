@@ -24,6 +24,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useModelCatalog, useRoles } from '../../hooks/agents.ts'
 import { useWorkspaces } from '../../hooks/workspaces.ts'
+import { replaceOnPhone } from '../../lib/back-guard.ts'
 import { cn } from '../../lib/cn.ts'
 import { type Command, useCommandStore, useRegisterCommands } from '../../lib/commands.ts'
 import { isDone, isMerged } from '../../lib/format.ts'
@@ -113,7 +114,7 @@ export function WorkspaceList({ selectedId }: { selectedId?: string }) {
 	// conversation instead of the workspace's default tab — the whole point of having
 	// found it by something that was said in it.
 	const open = (id: string, sessionId: string | null = null) => {
-		navigate(sessionId ? `/w/${id}?session=${encodeURIComponent(sessionId)}` : `/w/${id}`)
+		navigate(sessionId ? `/w/${id}?session=${encodeURIComponent(sessionId)}` : `/w/${id}`, replaceOnPhone())
 		setSidebarOpen(false)
 	}
 

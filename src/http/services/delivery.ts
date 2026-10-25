@@ -14,6 +14,7 @@ import {
 	materializeStagedAttachments,
 	pruneStagedAttachments
 } from '../../files/staged-attachments.ts'
+import { isAxTreeFailure, readWindowDiagnostics } from '../../host/window-diagnostics.ts'
 import { chatRoute, notifyAll } from '../../notifications/notify.ts'
 import { readPrefs } from '../../prefs.ts'
 import type { DeliveryCursor, DeliveryReceipt, SessionRow, Workspace } from '../../reads/types.ts'
@@ -247,6 +248,7 @@ export function createDeliveryServices(
 		const label = ws.branch ?? ws.id
 		const deadline = Date.now() + budgetMs
 		let attempts = 0
+		let diagnosed = 0
 		let last: SendResult = { ok: false, strategy: actuator.name }
 		for (;;) {
 			// A persisted delegation cursor can already have a receipt after a restart
@@ -272,6 +274,15 @@ export function createDeliveryServices(
 			if (landed) {
 				if (attempts > 1) console.info(`[relay] send to ${label} landed on attempt ${attempts}`)
 				return { ok: true, strategy: last.strategy, attempts, receipt: landed }
+			}
+			// "Conductor has a window but not its content" reaches the phone as a macOS sentence and says
+			// nothing about *why*, so leave the window's state next to it in the log: how deep the tree went,
+			// where the window sits and whether a display is under it. Two reads per send is enough to see
+			// whether it fills in between attempts, and each costs ~0.3s of the retry budget.
+			if (!last.ok && isAxTreeFailure(last.error) && diagnosed < 2) {
+				diagnosed++
+				const state = await readWindowDiagnostics()
+				if (state) console.warn(`[relay] send to ${label} window state after attempt ${attempts}: ${state}`)
 			}
 			if (retryWontHelp(last.error)) break
 			// A locked screen isn't worth the rest of the budget either — but for the

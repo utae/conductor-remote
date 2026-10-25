@@ -215,6 +215,7 @@ const PHONE_PARAM: Route1[] = [
 	routes.diff,
 	routes.fileDiff,
 	routes.workspaceFiles,
+	routes.workspaceSkills,
 	routes.devServer,
 	routes.messages,
 	routes.context,

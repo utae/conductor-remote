@@ -3,6 +3,7 @@ import { ArrowUp, Info, LoaderCircle, Minimize2, PhoneCall, Snowflake, Square, W
 import { useEffect, useRef, useState } from 'react'
 import { useAutoModelConfig, useContextBreakdown, useWorkflowRoleReadiness } from '../../hooks/agents.ts'
 import { useSendPrompt } from '../../hooks/send.ts'
+import { useSlashMenu } from '../../hooks/slash-menu.ts'
 import { client } from '../../lib/api.ts'
 import { cn } from '../../lib/cn.ts'
 import { contextRingSegments } from '../../lib/context.ts'
@@ -21,6 +22,7 @@ import {
 	EMPTY_ATTACHMENTS,
 	useAttachmentUploads
 } from './AttachmentUploads.tsx'
+import { SlashMenu } from './SlashMenu.tsx'
 
 /**
  * The draft lives in the store (persisted per chat — see lib/prompts/draft.ts), not in
@@ -118,6 +120,15 @@ export function Composer({
 		if (sessionId) setWorkflowDraft(sessionId, active)
 	}
 	const ref = useRef<HTMLTextAreaElement>(null)
+	// `/` at the start of a draft lists the skills this workspace's agent can be sent. Claude's only: the
+	// slash-command and skill files read here are Claude Code's, and nothing says Codex takes the same names.
+	const slash = useSlashMenu({
+		workspaceId,
+		text,
+		enabled: session?.agent_type === 'claude' && !!sessionId && !workflowMode && !compacting,
+		textareaRef: ref,
+		setText: value => setDraft(draftKey, value)
+	})
 	const attachmentUploads = useAttachmentUploads({
 		draftKey,
 		ready: visibleAttachments,
@@ -384,8 +395,11 @@ export function Composer({
 			<fieldset
 				aria-label="Message composer"
 				{...attachmentUploads.dropTargetProps}
-				className={`m-0 min-w-0 rounded-2xl border border-border bg-surface p-2 has-[textarea:focus]:border-accent/60 ${attachmentUploads.dragging ? 'border-accent bg-accent-soft' : ''}`}
+				className={`relative m-0 min-w-0 rounded-2xl border border-border bg-surface p-2 has-[textarea:focus]:border-accent/60 ${attachmentUploads.dragging ? 'border-accent bg-accent-soft' : ''}`}
 			>
+				{slash.open ? (
+					<SlashMenu items={slash.items} active={slash.active} onPick={slash.pick} onHover={slash.setActive} />
+				) : null}
 				<AttachmentTray uploads={attachmentUploads} />
 				<textarea
 					ref={ref}
@@ -398,7 +412,11 @@ export function Composer({
 					// text-base is load-bearing: iOS auto-zooms the page when a field under 16px
 					// takes focus, and never zooms back out on blur.
 					className="block max-h-40 w-full resize-none bg-transparent px-2 py-1 text-base outline-none placeholder:text-faint disabled:opacity-50"
-					onChange={e => setDraft(draftKey, e.target.value)}
+					onChange={e => {
+						setDraft(draftKey, e.target.value)
+						slash.onTyped(e)
+					}}
+					onSelect={slash.onSelect}
 					onFocus={() => setFocusedDraft(draftKey)}
 					onBlur={() => {
 						if (useApp.getState().focusedDraft === draftKey) setFocusedDraft(null)
@@ -408,6 +426,8 @@ export function Composer({
 					// On a touch keyboard Enter breaks the line instead (lib/keys.ts): there is
 					// no Shift+Enter on a phone, and the Send button is right there.
 					onKeyDown={e => {
+						// While the skill list is open its keys (arrows, Enter, Tab, Escape) are the menu's.
+						if (slash.onKeyDown(e)) return
 						if (enterSubmits(e)) {
 							e.preventDefault()
 							send(e.metaKey || e.ctrlKey)

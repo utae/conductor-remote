@@ -350,6 +350,23 @@ describe('relay HTTP routing', () => {
 		expect(lines.join('\n')).not.toContain('private')
 	})
 
+	test('serves the slash-menu skill list for a known workspace and 404s an unknown one', async () => {
+		const f = fixture()
+		const request = await listen(f.services)
+		const ok = await request('/api/workspaces/workspace-1/skills')
+		expect(ok.status).toBe(200)
+		// What is on this machine's disk varies; the contract is the shape.
+		const body = (await ok.json()) as { skills: { name: string; description: string; kind: string; source: string }[] }
+		expect(Array.isArray(body.skills)).toBe(true)
+		for (const entry of body.skills) {
+			expect(typeof entry.name).toBe('string')
+			expect(['skill', 'command']).toContain(entry.kind)
+			expect(['project', 'user', 'plugin', 'conductor']).toContain(entry.source)
+		}
+		expect((await request('/api/workspaces/nope/skills')).status).toBe(404)
+		expect((await request('/api/workspaces/workspace-1/skills', {}, false)).status).toBe(401)
+	})
+
 	test('validates staged settings before delivery and preserves explicit false values', async () => {
 		const f = fixture()
 		const request = await listen(f.services)

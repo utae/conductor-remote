@@ -184,8 +184,9 @@ on dialogButtons()
 	-- close spend its whole 28-second budget proving that no dialog existed.
 	my requireWindow()
 	set fromWindow to {}
+	set mainIdx to my mainWindowIndex()
 	tell application "System Events" to tell process "Conductor"
-		set fromWindow to my buttonsUnder(window 1, 4)
+		set fromWindow to my buttonsUnder(window mainIdx, 4)
 	end tell
 	return fromWindow & (my buttonsUnder(my webArea(), 3))
 end dialogButtons

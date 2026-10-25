@@ -21,9 +21,10 @@
 	   tab/group of the process", so a loop over your own list quietly iterates the
 	   wrong thing and the handler returns nothing. Keep logic outside the tell and
 	   reach in through one-line helpers, or name the variables `strip` and `pane`.
-	 - Every read is rooted at `window 1`, and Conductor keeps running with its
-	   windows closed. Go through `requireWindow` / `webArea` so a window that
-	   closed mid-run says so in words.
+	 - Every read is rooted at the main window, never at `window 1`, and Conductor
+	   keeps running with its windows closed. Go through `requireWindow` / `webArea`
+	   so a window that closed mid-run says so in words, and `mainWindowIndex` so a
+	   small floating window drawn in front of the main one is not mistaken for it.
 
 	How the chat targeting works, and why each step is here:
 
@@ -425,12 +426,44 @@ on activateConductor()
 	my requireWindow()
 end activateConductor
 
+on mainWindowIndex()
+	-- Which of Conductor's windows is the main one: the largest. `window 1` is only the
+	-- frontmost, and Conductor sometimes has a second, tiny window in front of the main
+	-- one — measured 2026-10-25: windows=2, window 1 an 84x77 floating (layer 3) window
+	-- whose single child had no children, while the 2560x1440 main window sat behind it.
+	-- Every walk rooted at `window 1` then died with "UI element 1 of UI element 1 of
+	-- window 1 ... Invalid index" for as long as that window stayed up (39s, three
+	-- attempts, nothing landed). With one window — the usual case — this is a single
+	-- count and answers 1, so the common path pays one Apple event. Size is a read:
+	-- nothing is raised, focused or moved. Any failure answers 1, the old behaviour.
+	set bestIdx to 1
+	try
+		tell application "System Events" to tell process "Conductor"
+			set winTotal to count of windows
+			if winTotal < 2 then return 1
+			set bestArea to 0
+			repeat with winIdx from 1 to winTotal
+				try
+					set dims to size of window winIdx
+					set winArea to (item 1 of dims) * (item 2 of dims)
+					if winArea > bestArea then
+						set bestArea to winArea
+						set bestIdx to winIdx
+					end if
+				end try
+			end repeat
+		end tell
+	end try
+	return bestIdx
+end mainWindowIndex
+
 on webArea()
-	-- The webview root: the window, then four nested containers. Guarded, or a
+	-- The webview root: the main window, then four nested containers. Guarded, or a
 	-- window that closed mid-run reappears as an "Invalid index" from a caller
 	-- that has nothing to do with windows.
 	my requireWindow()
+	set mainIdx to my mainWindowIndex()
 	tell application "System Events" to tell process "Conductor"
-		return UI element 1 of UI element 1 of UI element 1 of UI element 1 of window 1
+		return UI element 1 of UI element 1 of UI element 1 of UI element 1 of window mainIdx
 	end tell
 end webArea

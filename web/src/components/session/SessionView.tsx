@@ -138,8 +138,9 @@ export function SessionView() {
 
 	const chatHistory = sessionsData?.chat_history ?? {}
 	const sessions = conversationTabs(sessionsData?.sessions ?? [], chatHistory)
-	const pickedChat = latestChat(pickedSession, chatHistory)
-	const desktopChat = latestChat(ws?.active_session_id ?? null, chatHistory)
+	const openChats = new Set((sessionsData?.sessions ?? []).map(s => s.id))
+	const pickedChat = latestChat(pickedSession, chatHistory, openChats)
+	const desktopChat = latestChat(ws?.active_session_id ?? null, chatHistory, openChats)
 	const visibleActiveSession = desktopChat && sessions.some(s => s.id === desktopChat) ? desktopChat : null
 	const sessionId =
 		// A named chat that isn't here — hidden, or a stale link from an old notification —

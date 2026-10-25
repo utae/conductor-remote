@@ -36,7 +36,7 @@ export function ArchivedChat({ workspace }: { workspace: SearchWorkspace }) {
 
 	const links = data?.chat_history ?? {}
 	const sessions = conversationTabs(data?.sessions ?? [], links)
-	const pickedChat = latestChat(picked, links)
+	const pickedChat = latestChat(picked, links, new Set((data?.sessions ?? []).map(s => s.id)))
 	const sessionId =
 		(pickedChat && sessions.some(s => s.id === pickedChat) ? pickedChat : null) ?? sessions[0]?.id ?? null
 	const activeSession = sessions.find(s => s.id === sessionId)

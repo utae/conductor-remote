@@ -1,4 +1,5 @@
 import type { ConductorDb } from '../db.ts'
+import { samePrompt } from '../shared.ts'
 import {
 	type ContextBreakdown,
 	estimateContextCategories,
@@ -291,14 +292,14 @@ export class MessageReads {
 		const target = text.trim()
 		const durableReceipt = (): DeliveryReceipt | null => {
 			const durable = this.deliveryMessageRows('rowid > ?', [sessionId, before.rowid]).find(
-				row => row.content?.trim() === target && !before.outboxIds.has(row.id)
+				row => samePrompt(row.content, target) && !before.outboxIds.has(row.id)
 			)
 			return durable ? { kind: 'message', id: durable.id, rowid: durable.rowid, turnId: durable.turn_id ?? null } : null
 		}
 		const durable = durableReceipt()
 		if (durable) return durable
 		const accepted = this.rawOutboxRows(sessionId).find(
-			row => this.outboxText(row.delivery_payload)?.trim() === target && !before.outboxIds.has(row.message_id)
+			row => samePrompt(this.outboxText(row.delivery_payload), target) && !before.outboxIds.has(row.message_id)
 		)
 		if (accepted) return { kind: 'outbox', id: accepted.message_id }
 		// Promotion deletes the outbox row and inserts the durable row. If that
@@ -335,10 +336,10 @@ export class MessageReads {
 		const target = text.trim()
 		const durable = () => this.deliveryMessageRows('id = ?', [sessionId, messageId])[0]
 		const row = durable()
-		if (row) return row.content?.trim() === target
+		if (row) return samePrompt(row.content, target)
 		const queued = this.rawOutboxRows(sessionId, messageId)[0]
-		if (queued) return this.outboxText(queued.delivery_payload)?.trim() === target
-		return durable()?.content?.trim() === target
+		if (queued) return samePrompt(this.outboxText(queued.delivery_payload), target)
+		return samePrompt(durable()?.content, target)
 	}
 
 	/** Follow one accepted id as Conductor promotes it from outbox to transcript. */

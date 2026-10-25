@@ -293,6 +293,27 @@ describe('queued messages as send receipts', () => {
 		})
 	})
 
+	test('a multi-line prompt Conductor stored with CR is still the prompt that was sent', () => {
+		// 2026-10-26: the phone sent "a\nb\nc", Conductor wrote "a\rb\rc", and the strict compare called a send that
+		// landed a failure, retried it, and left the optimistic bubble beside the real row.
+		const db = new FakeDb()
+		const reads = readsFrom(db)
+		const before = reads.deliveryCursor('chat-1')
+		db.messages = [message(13, 'cr-id', 'first\rsecond\r\rthird', 'turn-cr')]
+
+		expect(reads.deliveryReceiptSince('chat-1', 'first\nsecond\n\nthird', before)).toEqual({
+			kind: 'message',
+			id: 'cr-id',
+			rowid: 13,
+			turnId: 'turn-cr'
+		})
+		expect(reads.deliveryTextMatches('chat-1', 'cr-id', 'first\nsecond\n\nthird')).toBe(true)
+		// The phone compares its own LF text with what the transcript serves, so that is LF too.
+		expect(reads.getMessages('chat-1', 0).entries.map(e => e.text)).toEqual(['first\nsecond\n\nthird'])
+		// Different words still differ.
+		expect(reads.deliveryReceiptSince('chat-1', 'first\nsecond\nfourth', before)).toBeNull()
+	})
+
 	test('closes the snapshot gap when an outbox row promotes after the first durable read', () => {
 		const db = new FakeDb()
 		const reads = readsFrom(db)

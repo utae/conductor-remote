@@ -18,6 +18,7 @@ import { readWindowDiagnostics, wantsWindowDiagnosis } from '../../host/window-d
 import { chatRoute, notifyAll } from '../../notifications/notify.ts'
 import { readPrefs } from '../../prefs.ts'
 import type { DeliveryCursor, DeliveryReceipt, SessionRow, Workspace } from '../../reads/types.ts'
+import { samePrompt } from '../../shared.ts'
 import { setAgentOptions } from '../../writes/agent-options.ts'
 import { newChat } from '../../writes/chats.ts'
 import { lockBlocked, retryWontHelp, screenLocked, sendNeverStarted } from '../../writes/guards.ts'
@@ -63,7 +64,7 @@ export function createDeliveryServices(
 	function deliveredRowSince(sessionId: string, text: string, sinceRowid: number): number | null {
 		const target = text.trim()
 		const { entries } = reads.getMessages(sessionId, sinceRowid)
-		return entries.find(e => e.role === 'user' && e.text.trim() === target)?.rowid ?? null
+		return entries.find(e => e.role === 'user' && samePrompt(e.text, target))?.rowid ?? null
 	}
 
 	/**

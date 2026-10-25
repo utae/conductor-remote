@@ -25,6 +25,21 @@ export function isAgentEffort(value: unknown): value is (typeof AGENT_EFFORTS)[n
 	return AGENT_EFFORTS.some(effort => effort === value)
 }
 
+/**
+ * Line endings as one: a prompt typed on the phone has `\n`, but Conductor stores a pasted one with `\r`
+ * (measured 2026-10-26: a three-line prompt landed as `a\rb\rc`). Compared raw, the row it wrote was not the
+ * prompt that was sent, so a send that landed was reported as "didn't land", retried, and finally failed
+ * while its optimistic bubble stayed beside the real row.
+ */
+export function normalizeNewlines(text: string): string {
+	return text.replace(/\r\n?/g, '\n')
+}
+
+/** Two prompts are the same prompt when only their line endings and outer whitespace differ. */
+export function samePrompt(a: string | null | undefined, b: string): boolean {
+	return a != null && normalizeNewlines(a).trim() === normalizeNewlines(b).trim()
+}
+
 /** Everything `workspaceTitle` needs — structural, because a search result is a leaner row. */
 export interface Titled {
 	id: string

@@ -2,8 +2,9 @@
 on composerControls()
 	set strips to my tabGroups()
 	if (count of strips) is 0 then error "couldn't find the composer"
+	set pane to my composerPane(strips)
+	if pane is missing value then error "couldn't find the composer"
 	tell application "System Events" to tell process "Conductor"
-		set pane to value of attribute "AXParent" of (item 1 of strips)
 		set composerBox to item 1 of (UI elements of pane whose name is "composer")
 		set out to {}
 		repeat with e in (UI elements of composerBox)

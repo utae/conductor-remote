@@ -22,6 +22,24 @@ export function isAxTreeFailure(error: string | undefined): boolean {
 	return /UI element \d+ of/.test(error) && /Invalid index|유효하지 않은 인덱스/.test(error)
 }
 
+/**
+ * The chat strip could not be found or told apart (`pickChatStrip` / `selectChatTab` in chat-targeting.applescript).
+ * These are this repo's own sentences, so the match is exact. They say nothing about *why* — a layout change
+ * (Conductor 0.92.0 moved the strip to depth 11) and a half-built tree look the same from the phone — so the
+ * tab groups the window actually has are logged beside them.
+ */
+export function isTabStripFailure(error: string | undefined): boolean {
+	if (!error) return false
+	return /couldn.t identify the chat tab strip|can.t tell which tab strip holds|couldn.t find the chat tab strip/.test(
+		error
+	)
+}
+
+/** Either failure: both are "the window is up but not shaped the way the walk expects". */
+export function wantsWindowDiagnosis(error: string | undefined): boolean {
+	return isAxTreeFailure(error) || isTabStripFailure(error)
+}
+
 /** What the window server and the displays say, as `readWindowServer` reports it. */
 export interface WindowServerFacts {
 	displays: number | null
@@ -37,7 +55,9 @@ export interface WindowDiagnostics {
 }
 
 /**
- * One log line. `tree` is the child count at each level of the path `webArea()` walks — window 1, then four
+ * One log line. `strips=` lists every tab group found as `d<depth>:r<radio buttons>c<"Close chat" tabs>`: a healthy
+ * 0.92.0 window reads `d7:r4c0 d11:r2c2` (terminal strip, then chat strip), and "none" means no tab group was reachable.
+ * `tree` is the child count at each level of the path `webArea()` walks — window 1, then four
  * nested containers, then the web area's own children — so a healthy window reads `1>1>1>1>3` and the
  * failure this exists for reads shorter (`1>1>0`): the level where the numbers stop is the answer.
  * Never prints a window title or any chat text; the frontmost app's name is the only free text.
@@ -87,7 +107,63 @@ tell application "System Events"
 				exit repeat
 			end try
 		end repeat
-		return summary & " tree=" & trail
+		set summary to summary & " tree=" & trail
+		-- Every tab group with its depth, radio-button count and how many of those are "Close chat …"
+		-- tabs: the chat strip is the one with chat tabs, wherever it sits. Pruned like the relay's own
+		-- search (nothing wider than 30 children is opened), so this stays near 2s.
+		set stripInfo to ""
+		set level to {firstWin}
+		set depth to 0
+		set seen to 0
+		set leafRoles to {"AXStaticText", "AXButton", "AXPopUpButton", "AXLink", "AXTextArea", "AXRadioButton", "AXListMarker", "AXList", "AXImage", "AXSplitter", "AXCheckBox"}
+		repeat while (count of level) > 0 and depth < 14 and seen < 400
+			set nextLevel to {}
+			repeat with entry in level
+				set node to contents of entry
+				set seen to seen + 1
+				set nodeRole to ""
+				try
+					set nodeRole to role of node
+				end try
+				if nodeRole is "AXTabGroup" then
+					set radioCount to 0
+					set chatCount to 0
+					try
+						repeat with kid in (UI elements of node)
+							set kidNode to contents of kid
+							if (role of kidNode) is "AXRadioButton" then
+								set radioCount to radioCount + 1
+							else
+								repeat with grandKid in (UI elements of kidNode)
+									try
+										if (role of (contents of grandKid)) is "AXRadioButton" then
+											set radioCount to radioCount + 1
+											if ((name of (contents of grandKid)) as text) starts with "Close chat" then set chatCount to chatCount + 1
+										end if
+									end try
+								end repeat
+							end if
+						end repeat
+					end try
+					set entryText to "d" & depth & ":r" & radioCount & "c" & chatCount
+					if stripInfo is "" then
+						set stripInfo to entryText
+					else
+						set stripInfo to stripInfo & " " & entryText
+					end if
+				end if
+				if leafRoles does not contain nodeRole then
+					try
+						set kids to (get UI elements of node)
+						if (count of kids) <= 30 then set nextLevel to nextLevel & kids
+					end try
+				end if
+			end repeat
+			set level to nextLevel
+			set depth to depth + 1
+		end repeat
+		if stripInfo is "" then set stripInfo to "none"
+		return summary & " strips=" & stripInfo
 	end tell
 end tell
 `

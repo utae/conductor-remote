@@ -32,7 +32,8 @@ describe('Conductor AppleScript window addressing', () => {
 		expect(text).toMatch(/on mainWindowIndex\(\)/)
 		expect(text).toMatch(/window mainIdx\b/)
 		// Each caller computes the index outside the tell, so the handler name cannot resolve as an SE term.
-		for (const handler of ['webArea', 'tabGroups', 'dialogButtons']) {
+		// `tabGroups` delegates the walk to `collectTabGroups`, which is where the window is chosen.
+		for (const handler of ['webArea', 'collectTabGroups', 'dialogButtons']) {
 			const body = text.split(new RegExp(`^on ${handler}\\(`, 'm'))[1]?.split(/^end /m)[0] ?? ''
 			expect(body, handler).toContain('my mainWindowIndex()')
 		}

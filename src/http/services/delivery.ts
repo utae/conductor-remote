@@ -14,7 +14,7 @@ import {
 	materializeStagedAttachments,
 	pruneStagedAttachments
 } from '../../files/staged-attachments.ts'
-import { isAxTreeFailure, readWindowDiagnostics } from '../../host/window-diagnostics.ts'
+import { readWindowDiagnostics, wantsWindowDiagnosis } from '../../host/window-diagnostics.ts'
 import { chatRoute, notifyAll } from '../../notifications/notify.ts'
 import { readPrefs } from '../../prefs.ts'
 import type { DeliveryCursor, DeliveryReceipt, SessionRow, Workspace } from '../../reads/types.ts'
@@ -275,11 +275,11 @@ export function createDeliveryServices(
 				if (attempts > 1) console.info(`[relay] send to ${label} landed on attempt ${attempts}`)
 				return { ok: true, strategy: last.strategy, attempts, receipt: landed }
 			}
-			// "Conductor has a window but not its content" reaches the phone as a macOS sentence and says
-			// nothing about *why*, so leave the window's state next to it in the log: how deep the tree went,
-			// where the window sits and whether a display is under it. Two reads per send is enough to see
+			// "Conductor has a window but not its content", or no chat strip in it, reaches the phone as a
+			// sentence that says nothing about *why*, so leave the window's state next to it in the log: how
+			// deep the tree went, which tab groups it holds, where the window sits and whether a display is under it. Two reads per send is enough to see
 			// whether it fills in between attempts, and each costs ~0.3s of the retry budget.
-			if (!last.ok && isAxTreeFailure(last.error) && diagnosed < 2) {
+			if (!last.ok && wantsWindowDiagnosis(last.error) && diagnosed < 2) {
 				diagnosed++
 				const state = await readWindowDiagnostics()
 				if (state) console.warn(`[relay] send to ${label} window state after attempt ${attempts}: ${state}`)

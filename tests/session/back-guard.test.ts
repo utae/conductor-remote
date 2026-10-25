@@ -1,12 +1,12 @@
 /**
- * Android back: with the drawer closed it opens the drawer, with the drawer open it leaves the app. A page
+ * Android back: on a chat, with the drawer closed it opens the drawer, with the drawer open it leaves the app. A page
  * only sees the history it pops, so the whole feature is a state machine over a stack, and a stack is
  * something a test can model. `FakeStack` is the browser's history as far as the guard uses it: pushing adds
  * an entry, a back press pops one and fires `popstate` — and with nothing below the root entry, the press
  * leaves the app, which is what an installed PWA does.
  */
 import { describe, expect, test } from 'vitest'
-import { BackGuard } from '../../web/src/lib/back-guard.ts'
+import { BackGuard, wantsBackGuard } from '../../web/src/lib/back-guard.ts'
 
 class FakeStack {
 	entries: unknown[] = [null]
@@ -147,5 +147,40 @@ describe('Android back with the workspace drawer', () => {
 		const a = app({ open: true })
 		a.guard.onPopState()
 		expect(a.state.presses).toBe(0)
+	})
+})
+
+describe('which screens are guarded', () => {
+	test('only a phone on a chat with the drawer closed', () => {
+		expect(wantsBackGuard({ phone: true, onChat: true, open: false })).toBe(true)
+		expect(wantsBackGuard({ phone: true, onChat: true, open: true })).toBe(false)
+		expect(wantsBackGuard({ phone: true, onChat: false, open: false })).toBe(false)
+		expect(wantsBackGuard({ phone: false, onChat: true, open: false })).toBe(false)
+	})
+
+	test('leaving the chat releases our entry without popping, so the router is not sent back to the chat', () => {
+		const a = app({ open: false })
+		expect(a.guard.isArmed).toBe(true)
+		const before = a.stack.index
+		a.guard.release()
+		expect(a.guard.isArmed).toBe(false)
+		expect(a.stack.index).toBe(before)
+		// A later press is the browser's, not ours: no drawer opens.
+		a.press()
+		expect(a.state.presses).toBe(0)
+	})
+
+	test('a screen the guard does not cover pushes nothing, so back is the default', () => {
+		const stack = new FakeStack()
+		const guard = new BackGuard(
+			stack,
+			() => '/',
+			() => {}
+		)
+		stack.onPop = () => guard.onPopState()
+		guard.release()
+		expect(stack.entries).toHaveLength(1)
+		stack.back()
+		expect(stack.exited).toBe(true)
 	})
 })

@@ -73,7 +73,9 @@ export function SearchSheet({
 
 	// Focus on mount rather than with `autoFocus`: React applies that one before the
 	// node is in the document on some WebKit builds, and the keyboard never comes up.
-	useEffect(() => inputRef.current?.focus(), [])
+	useEffect(() => {
+		inputRef.current?.focus()
+	}, [])
 
 	// Esc is the desktop way out — the phone has the X and the scrim. An open picker
 	// takes the first press, the sheet the second.

@@ -6,7 +6,12 @@
  * here — they live in strings, so only running them tells you (run once against the live Mac).
  */
 import { describe, expect, it } from 'vitest'
-import { formatWindowDiagnostics, isAxTreeFailure } from '../../src/host/window-diagnostics.ts'
+import {
+	formatWindowDiagnostics,
+	isAxTreeFailure,
+	isTabStripFailure,
+	wantsWindowDiagnosis
+} from '../../src/host/window-diagnostics.ts'
 
 describe('isAxTreeFailure', () => {
 	it('matches the failure that reached a phone, in Korean and in English', () => {
@@ -85,5 +90,30 @@ describe('formatWindowDiagnostics', () => {
 		})
 		expect(line).toContain('main3=')
 		expect(line).not.toContain('main4=')
+	})
+})
+
+describe('isTabStripFailure', () => {
+	it('matches the three sentences the chat-strip handlers raise', () => {
+		expect(isTabStripFailure("couldn't identify the chat tab strip")).toBe(true)
+		expect(isTabStripFailure("couldn't identify the chat tab strip (tried 5×)")).toBe(true)
+		expect(isTabStripFailure("can't tell which tab strip holds the target chat")).toBe(true)
+		expect(isTabStripFailure("couldn't find the chat tab strip")).toBe(true)
+		// macOS sometimes hands back typographic apostrophes.
+		expect(isTabStripFailure('couldn’t identify the chat tab strip')).toBe(true)
+	})
+
+	it('leaves unrelated failures alone', () => {
+		expect(isTabStripFailure(undefined)).toBe(false)
+		expect(isTabStripFailure('chat tab 2 not found')).toBe(false)
+		expect(isTabStripFailure('The Mac is locked')).toBe(false)
+		expect(isTabStripFailure("the palette didn't land on pla-5932")).toBe(false)
+	})
+
+	it('either kind of window-shape failure starts a diagnosis, and nothing else does', () => {
+		expect(wantsWindowDiagnosis("couldn't identify the chat tab strip")).toBe(true)
+		expect(wantsWindowDiagnosis('UI element 1 of UI element 1 of window 1 … Invalid index')).toBe(true)
+		expect(wantsWindowDiagnosis('chat tab 2 not found')).toBe(false)
+		expect(wantsWindowDiagnosis(undefined)).toBe(false)
 	})
 })

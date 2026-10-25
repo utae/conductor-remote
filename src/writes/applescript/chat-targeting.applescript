@@ -1,30 +1,78 @@
 
 on tabGroups()
-	-- Level-order search, returning every tab group at the shallowest depth that
-	-- has one (the chat strip and the terminal strip are siblings). Bounded: the
-	-- pane sits ~5 levels down, and we must never descend into the transcript.
+	-- Every tab group in the main window, shallowest first, at whatever depth it sits.
+	-- It used to stop at the first depth that had one, which held while the chat strip and
+	-- the terminal strip were siblings. Conductor 0.92.0 split them: the terminal strip
+	-- (Setup / Run / Terminal N) is at depth 7 beside the workspace header, the chat strip
+	-- at depth 11 beside the composer. Stopping at depth 7 returned the terminal strip
+	-- alone, which scored zero against the chat count and title, so every send failed with
+	-- "couldn't identify the chat tab strip" (relay log 2026-10-25, five sends, none landed).
+	-- Order stays shallowest-first on purpose: the workspace header is a sibling of the
+	-- terminal strip, so `assertWorkspace(item 1 of strips)` still finds it, while the
+	-- composer is beside the chat strip and is reached through `composerPane`.
 	my requireWindow()
+	set found to my collectTabGroups(30)
+	-- Nothing found means a node the narrow pass refused to open held them (the pass skips
+	-- anything wider than 30 children, which is what keeps the sidebar out and the pass
+	-- near 2s instead of 8s). Look once more without that limit rather than report no strip.
+	if (count of found) is 0 then set found to my collectTabGroups(100000)
+	return found
+end tabGroups
+
+on collectTabGroups(widthLimit)
+	-- Level-order, depth <= 14, and at most 400 nodes. Leaves are not opened: a button or a
+	-- line of text has no tab strip under it, and asking costs an Apple event each. The web
+	-- area's own scroll-area host is *not* a leaf, which is what stopped an earlier attempt
+	-- at depth 4. Never descends into the transcript: it hangs off a node wider than the
+	-- limit, and the node cap bounds the wide pass.
 	set mainIdx to my mainWindowIndex()
+	set found to {}
+	set visited to 0
+	set leafRoles to {"AXStaticText", "AXButton", "AXPopUpButton", "AXLink", "AXTextArea", "AXRadioButton", "AXListMarker", "AXList", "AXImage", "AXSplitter", "AXCheckBox"}
 	tell application "System Events" to tell process "Conductor"
 		set level to {window mainIdx}
 		set depth to 0
-		repeat while (count of level) > 0 and depth < 8
-			set found to {}
+		repeat while (count of level) > 0 and depth < 14 and visited < 400
 			set nextLevel to {}
 			repeat with entry in level
 				set node to contents of entry
+				set visited to visited + 1
+				set nodeRole to ""
 				try
-					set found to found & (get UI elements of node whose role is "AXTabGroup")
-					set nextLevel to nextLevel & (get UI elements of node)
+					set nodeRole to role of node
 				end try
+				if nodeRole is "AXTabGroup" then set end of found to node
+				if leafRoles does not contain nodeRole then
+					try
+						set kids to (get UI elements of node)
+						if (count of kids) <= widthLimit then set nextLevel to nextLevel & kids
+					end try
+				end if
 			end repeat
-			if (count of found) > 0 then return found
 			set level to nextLevel
 			set depth to depth + 1
 		end repeat
 	end tell
-	return {}
-end tabGroups
+	return found
+end collectTabGroups
+
+on composerPane(strips)
+	-- The pane that holds the composer: the parent of whichever strip has a "composer"
+	-- group beside it. With the chat strip and the terminal strip in different containers
+	-- (0.92.0) `item 1 of strips` is the terminal strip, whose parent has no composer, so
+	-- the pane is looked up rather than assumed. Before the split every strip shared one
+	-- parent, and the first one that has the composer is still the first one. missing value
+	-- when none does, which callers already treat as "fall back to pasting".
+	repeat with entry in strips
+		try
+			tell application "System Events" to tell process "Conductor"
+				set pane to value of attribute "AXParent" of (contents of entry)
+				if (count of (UI elements of pane whose name is "composer")) > 0 then return pane
+			end tell
+		end try
+	end repeat
+	return missing value
+end composerPane
 
 on stripRadios(tg)
 	-- Every radio button in a tab strip, whether it is a direct child or sits one
@@ -65,6 +113,17 @@ on chatTabs(tg)
 	if (count of chats) > 0 then return chats
 	return radios
 end chatTabs
+
+on hasChatTabs(strips)
+	-- Is any strip a chat strip: one with a radio button named "Close chat <title>". The
+	-- terminal strip never is, whatever its radio buttons are called.
+	repeat with entry in strips
+		repeat with r in my stripRadios(contents of entry)
+			if (my axName(contents of r)) starts with "Close chat" then return true
+		end repeat
+	end repeat
+	return false
+end hasChatTabs
 
 on tabLabel(t)
 	tell application "System Events" to tell process "Conductor"

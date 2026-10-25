@@ -403,6 +403,22 @@ Two asymmetric halves — keep them separate:
        failed every send with "chat tab 1 not found". **The terminal panel is an
        `AXTabGroup` too** (Setup/Run/Terminal 1) — candidates are scored on tab
        count + label and a tie aborts, so we never type into a terminal.
+       **Since Conductor 0.92.0 the two strips are not siblings.** The terminal
+       strip sits at depth 7 beside the workspace header (`assertWorkspace` reads the
+       branch and repo off *its* parent), the chat strip at depth 11 beside the
+       `composer` group (`composerPane` finds the pane that has one). `tabGroups()`
+       used to return only the shallowest depth that had a tab group, i.e. the
+       terminal strip alone, which scored zero against the chat count and title:
+       every phone send failed with "couldn't identify the chat tab strip" from the
+       0.92.0 update (2026-10-24 08:14) on, and none landed. It now collects tab
+       groups at every depth up to 14, shallowest first (that order is what keeps
+       `assertWorkspace(item 1 of strips)` working), skipping nodes wider than 30
+       children so the sidebar stays out (~2s, ~100 nodes; unpruned it is ~8s and
+       ~370), and widens once only when the narrow pass finds nothing. The node at
+       depth 11 is not stable across Conductor releases: when sends fail with a
+       strip error, the `window state` line in `relay.err.log` now carries
+       `strips=d7:r4c0 d11:r2c1` (depth, radio buttons, "Close chat" tabs) — read
+       that before guessing.
     4. **Composer** — `AXGroup "composer"` holds an `AXTextArea` whose `AXFocused`
        and `AXValue` are both settable, so the prompt is *written*, read back to
        verify, then Enter. No clipboard hijack, no Cmd+L/Cmd+V. Clipboard paste

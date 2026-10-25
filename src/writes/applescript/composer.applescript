@@ -19,9 +19,10 @@ on composerField()
 	-- composer isn't there at all, which is the caller's cue to fall back to pasting.
 	set strips to my tabGroups()
 	if (count of strips) is 0 then return missing value
+	set pane to my composerPane(strips)
+	if pane is missing value then return missing value
 	try
 		tell application "System Events" to tell process "Conductor"
-			set pane to value of attribute "AXParent" of (item 1 of strips)
 			set composerBox to item 1 of (UI elements of pane whose name is "composer")
 			return item 1 of (UI elements of composerBox whose role is "AXTextArea")
 		end tell
@@ -166,9 +167,14 @@ on selectChatTab()
 		if wantCount <= 1 then return
 		error "couldn't find the chat tab strip"
 	end if
-	-- Assert the workspace first: every strip lives in the same pane, so this
-	-- reports "wrong workspace" rather than a confusing "no chat strip".
+	-- Assert the workspace first, so this reports "wrong workspace" rather than a confusing
+	-- "no chat strip". The header is beside the first (shallowest) strip.
 	my assertWorkspace(item 1 of strips)
+	-- A lone chat with no chat tab in the tree has no ambiguity to resolve, the same as the
+	-- no-strip case above: the deep link already selected it and the composer step checks
+	-- the pane. Several chats never get this: with more than one, no strip means we cannot
+	-- say which tab is selected, and that is refused below rather than guessed.
+	if wantCount <= 1 and not (my hasChatTabs(strips)) then return
 	set picked to my pickChatStrip(strips, wantCount, wantTitle)
 	set tabs to item 2 of picked
 	tell application "System Events" to tell process "Conductor"

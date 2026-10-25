@@ -8,6 +8,7 @@ import { useSendPrompt } from '../../hooks/send.ts'
 import { useWorkspaceCommands } from '../../hooks/workspace-commands.ts'
 import { useAnyWorkspace, useConnection, useSessions, useWorkspaces } from '../../hooks/workspaces.ts'
 import { ApiError, client } from '../../lib/api.ts'
+import { replaceOnPhone } from '../../lib/back-guard.ts'
 import { connectionNotice } from '../../lib/connection.ts'
 import type { DiffFileScope } from '../../lib/diff.ts'
 import { buildResolver, MentionResolverProvider } from '../../lib/fileMentions.ts'
@@ -353,7 +354,8 @@ export function SessionView() {
 					navigate(
 						split.sessionId
 							? `/w/${split.workspaceId}?session=${encodeURIComponent(split.sessionId)}`
-							: `/w/${split.workspaceId}`
+							: `/w/${split.workspaceId}`,
+						replaceOnPhone()
 					)
 					return
 				}

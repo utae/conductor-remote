@@ -15,6 +15,7 @@ import {
 	supportsPlanMode
 } from '../../lib/agent.ts'
 import { client } from '../../lib/api.ts'
+import { replaceOnPhone } from '../../lib/back-guard.ts'
 import { cn } from '../../lib/cn.ts'
 import { enterSubmits } from '../../lib/keys.ts'
 import { requestPrefsFlush } from '../../lib/prefs.ts'
@@ -246,7 +247,7 @@ export function NewWorkspaceSheet({ onClose }: { onClose: () => void }) {
 				clearDraftContent(NEW_WORKSPACE_DRAFT)
 				finishWorkflowAttempt(attemptKey, clientId)
 				onClose()
-				if (response.workflow.workspaceId) navigate(`/w/${response.workflow.workspaceId}`)
+				if (response.workflow.workspaceId) navigate(`/w/${response.workflow.workspaceId}`, replaceOnPhone())
 				return
 			}
 			const r = await client.createWorkspace({
@@ -268,7 +269,7 @@ export function NewWorkspaceSheet({ onClose }: { onClose: () => void }) {
 			clearDraftContent(NEW_WORKSPACE_DRAFT)
 			useApp.getState().clearAgentDraft(NEW_WORKSPACE_DRAFT, agent)
 			onClose()
-			navigate(`/w/${r.workspaceId}`)
+			navigate(`/w/${r.workspaceId}`, replaceOnPhone())
 		} catch (e) {
 			setError(e instanceof Error ? e.message : 'could not create the workspace')
 		} finally {

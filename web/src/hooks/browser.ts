@@ -1,8 +1,45 @@
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../lib/api.ts'
+import { BackGuard, isPhoneLayout } from '../lib/back-guard.ts'
 import { hasSelection, overSelection } from '../lib/selection.ts'
 import { useApp } from '../store.ts'
+
+/**
+ * Android's back button and back swipe: drawer closed → open it, drawer open → leave the app. The mechanism
+ * and why navigation must `replace` on a phone are in `lib/back-guard.ts`. A no-op from `md` up, where the
+ * rail is always there and back is the browser's own.
+ */
+export function useBackButton() {
+	const open = useApp(s => s.sidebarOpen)
+	const setSidebarOpen = useApp(s => s.setSidebarOpen)
+	const [phone, setPhone] = useState(isPhoneLayout)
+	const guard = useRef<BackGuard | null>(null)
+	if (!guard.current) {
+		guard.current = new BackGuard(
+			window.history,
+			() => window.location.href,
+			() => setSidebarOpen(true)
+		)
+	}
+
+	useEffect(() => {
+		const media = window.matchMedia('(min-width: 768px)')
+		const update = () => setPhone(!media.matches)
+		media.addEventListener('change', update)
+		return () => media.removeEventListener('change', update)
+	}, [])
+
+	useEffect(() => {
+		const onPop = () => guard.current?.onPopState()
+		window.addEventListener('popstate', onPop)
+		return () => window.removeEventListener('popstate', onPop)
+	}, [])
+
+	useEffect(() => {
+		guard.current?.sync(phone && !open)
+	}, [phone, open])
+}
 
 /**
  * Drag-to-open the mobile workspace drawer, and hijack iOS/Chrome's left-edge

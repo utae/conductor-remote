@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { client } from '../lib/api.ts'
+import { replaceOnPhone } from '../lib/back-guard.ts'
 import type { PushSupport } from '../lib/push.ts'
 import {
 	closeNotifications,
@@ -210,7 +211,7 @@ export function usePushRouting(): void {
 		let live = true
 		const claimParked = () => {
 			void takeParkedRoute().then(url => {
-				if (live && url) navigate(url)
+				if (live && url) navigate(url, replaceOnPhone())
 			})
 		}
 		const onMessage = (event: MessageEvent) => {
@@ -218,7 +219,7 @@ export function usePushRouting(): void {
 			if (data?.type === 'push-navigate' && typeof data.url === 'string' && data.url.startsWith('/')) {
 				// Consume the parked copy of this same tap, or it lands twice.
 				void takeParkedRoute()
-				navigate(data.url)
+				navigate(data.url, replaceOnPhone())
 			}
 		}
 		const onVisible = () => {

@@ -26,7 +26,7 @@ export function createAutoModelServices(services: BaseServices & DeliveryService
 		deliverPrompt,
 		STAGED_ATTACHMENTS_DIR
 	} = services
-	const autoModelConfig = new AutoModelConfigStore(path.join(stateDir(), 'auto-model.json'))
+	const autoModelConfig = new AutoModelConfigStore(path.join(stateDir(), 'auto-model.json'), () => modelCache.list())
 	const received = (job: AutoModelJob) =>
 		!!(
 			job.sessionId &&

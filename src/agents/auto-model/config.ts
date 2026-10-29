@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { z } from 'zod'
-import { currentModelCatalog, modelAgentType } from '../../shared.ts'
+import { currentModelCatalog, modelAgentType, savedModelCatalog } from '../../shared.ts'
 import type { CachedModelGroup } from '../../wire.ts'
 import { roleModelIssues } from '../roles.ts'
 import type { AutoModelConfig, AutoModelTuple } from './types.ts'
@@ -140,16 +140,43 @@ export function atomicJson(file: string, value: unknown): void {
 	}
 }
 
+/**
+ * The built-in profiles name models the way one picker once spelled them (`5.6 Luna`), while the desktop's own
+ * catalog says `GPT-5.6 Luna`, so against it every default read as missing. Point each default at the catalog's
+ * spelling of the same model, and drop an optional profile whose model the picker does not offer at all (the
+ * OpenCode one) instead of showing an error for something nobody chose. The router and the fallback stay as
+ * they are: they are not optional, so a miss there should stay visible.
+ */
+export function adaptAutoDefaults(config: AutoModelConfig, groups: CachedModelGroup[]): AutoModelConfig {
+	const catalog = savedModelCatalog(groups)
+	if (!catalog.length) return config
+	const bare = (label: string) => label.replace(/^GPT-/, '')
+	const resolve = (label: string): string | null =>
+		catalog.includes(label) ? label : (catalog.find(entry => bare(entry) === bare(label)) ?? null)
+	return {
+		...config,
+		router: { ...config.router, model: resolve(config.router.model) ?? config.router.model },
+		profiles: config.profiles.flatMap(profile => {
+			const model = resolve(profile.model)
+			if (model) return [{ ...profile, model }]
+			return profile.id === config.fallback ? [profile] : []
+		})
+	}
+}
+
 export class AutoModelConfigStore {
 	private readonly file: string
-	constructor(file: string) {
+	private readonly catalog: () => CachedModelGroup[]
+	constructor(file: string, catalog: () => CachedModelGroup[] = () => []) {
 		this.file = file
+		this.catalog = catalog
 	}
 	read(): AutoModelConfig {
 		try {
 			return decodeAutoModelConfig(JSON.parse(fs.readFileSync(this.file, 'utf8')))
 		} catch (error) {
-			if ((error as NodeJS.ErrnoException).code === 'ENOENT') return structuredClone(DEFAULT_AUTO_MODEL_CONFIG)
+			if ((error as NodeJS.ErrnoException).code === 'ENOENT')
+				return adaptAutoDefaults(structuredClone(DEFAULT_AUTO_MODEL_CONFIG), this.catalog())
 			throw new Error('Auto settings could not be read. Repair auto-model.json before using Auto.', { cause: error })
 		}
 	}

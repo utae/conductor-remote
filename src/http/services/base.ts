@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 
 import path from 'node:path'
+import { readConductorModelSeed } from '../../agents/conductor-catalog.ts'
 import { ModelCache } from '../../agents/model-cache.ts'
 import { RoleStore } from '../../agents/roles.ts'
 import { loadConfig, stateDir } from '../../config.ts'
@@ -78,7 +79,15 @@ export function createBaseServices() {
 	// Picker labels cannot be reconstructed from `sessions.model`, so they belong to
 	// relay state alongside the prompt queues. This lets a brand-new workspace choose
 	// from a list before Conductor has created its first chat.
-	const modelCache = new ModelCache(path.join(stateDir(), 'model-cache.json'))
+	// The desktop's own catalog and default stand in until a real picker has been read; it is a few small
+	// reads of files and settings rows, so one answer is reused for a short while instead of per request.
+	let desktopModels: { at: number; seed: ReturnType<typeof readConductorModelSeed> } | null = null
+	const modelCache = new ModelCache(path.join(stateDir(), 'model-cache.json'), () => {
+		if (!desktopModels || Date.now() - desktopModels.at > 30_000) {
+			desktopModels = { at: Date.now(), seed: readConductorModelSeed(db) }
+		}
+		return desktopModels.seed
+	})
 	const chatHistory = new ChatHistoryStore(path.join(stateDir(), 'chat-history.json'))
 
 	const planUsage = new PlanUsageService()

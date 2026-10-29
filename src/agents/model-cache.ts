@@ -9,6 +9,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { modelPickerLabel } from '../shared.ts'
+import type { ConductorModelSeed } from './conductor-catalog.ts'
 
 export interface CachedModelGroup {
 	/** Harness of the chat where this whole picker menu was observed; not ownership of every row. */
@@ -49,14 +50,20 @@ function group(agentType: string): string {
 export class ModelCache {
 	private readonly file: string
 	private entries: CachedModelGroup[]
+	private readonly seed: () => ConductorModelSeed | null
 
-	constructor(file: string) {
+	/**
+	 * `seed` is what the desktop app already knows (its own catalog and default). It only fills in where no live
+	 * picker read has been seen, so a menu observed from a real chat always wins over it.
+	 */
+	constructor(file: string, seed: () => ConductorModelSeed | null = () => null) {
 		this.file = file
 		this.entries = this.load()
+		this.seed = seed
 	}
 
 	list(): CachedModelGroup[] {
-		return this.entries.map(entry => ({
+		return this.withSeed().map(entry => ({
 			...entry,
 			models: [...entry.models],
 			...(entry.snapshotModels ? { snapshotModels: [...entry.snapshotModels] } : {}),
@@ -66,7 +73,35 @@ export class ModelCache {
 
 	/** The newest live picker read wins when upgrading from caches that disagree. */
 	defaultModel(): string | undefined {
+		return this.liveDefault() ?? this.seed()?.defaultModel
+	}
+
+	/** The default a live picker read saw, never the desktop's setting: only that one is persisted. */
+	private liveDefault(): string | undefined {
 		return [...this.entries].sort((a, b) => b.updatedAt - a.updatedAt).find(entry => entry.defaultModel)?.defaultModel
+	}
+
+	/** Live entries, plus the desktop's catalog for every harness whose real picker was never read. */
+	private withSeed(): CachedModelGroup[] {
+		const seed = this.seed()
+		if (!seed) return this.entries
+		const defaultModel = this.defaultModel()
+		const merged = [...this.entries]
+		for (const group of seed.groups) {
+			const index = merged.findIndex(entry => entry.agentType === group.agentType)
+			const live = merged[index]
+			// A whole-menu observation is authoritative: it also says what Conductor stopped offering.
+			if (live?.snapshotAt != null) continue
+			const entry: CachedModelGroup = {
+				...group,
+				models: live ? clean([...group.models, ...live.models]) : group.models,
+				...(live?.selections ? { selections: live.selections } : {}),
+				...(defaultModel ? { defaultModel } : {})
+			}
+			if (live) merged[index] = entry
+			else merged.push(entry)
+		}
+		return merged.sort((a, b) => a.agentType.localeCompare(b.agentType))
 	}
 
 	/** Record the menu that was read from one chat. An empty or failed read changes nothing. */
@@ -74,7 +109,7 @@ export class ModelCache {
 		const next = clean(models)
 		if (!next.length) return
 		const key = group(agentType ?? '')
-		const selectedDefault = clean(defaultModel ? [defaultModel] : [])[0] ?? this.defaultModel()
+		const selectedDefault = clean(defaultModel ? [defaultModel] : [])[0] ?? this.liveDefault()
 		const now = Date.now()
 		const entry: CachedModelGroup = {
 			agentType: key,
@@ -108,7 +143,7 @@ export class ModelCache {
 		const entry: CachedModelGroup = {
 			agentType: key,
 			models: clean([...(current?.models ?? []), model]),
-			defaultModel: current?.defaultModel ?? this.defaultModel(),
+			defaultModel: current?.defaultModel ?? this.liveDefault(),
 			// Selecting one row proves that row, not the rest of the picker. Preserve
 			// an existing whole-menu observation but mark a brand-new group partial.
 			snapshotAt: current?.snapshotAt ?? null,

@@ -111,7 +111,8 @@ export function useSendPrompt() {
 					setTimeout(() => removePending(id), 4000)
 					return true
 				}
-				failPending(id, r.error || 'Send failed')
+				// `unsure`: the relay could not tell whether it landed, so the transcript, not this bubble, decides.
+				failPending(id, r.error || 'Send failed', r.unsure === true)
 			} catch (err) {
 				// No answer is not a failure: the prompt may be in Conductor already (the relay keeps
 				// going after the phone gives up or the page dies), so mark it for the transcript to settle.

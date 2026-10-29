@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
 import { withoutClientWindowEvidence, withoutWindowEvidence } from '../../src/shared.ts'
 import { readConductorAppleScript } from '../../src/writes/applescript/source.ts'
-import { lockBlocked, retryWontHelp, sendNeverStarted } from '../../src/writes/guards.ts'
+import { lockBlocked, retryWontHelp, sendMayHaveLanded, sendNeverStarted } from '../../src/writes/guards.ts'
 import { uiBusy } from '../../src/writes/ui-lock.ts'
 
 /**
@@ -109,5 +109,21 @@ describe('send failure predicates', () => {
 		expect(uiBusy(`${busy} (tried 2×)`)).toBe(true)
 		expect(uiBusy(ERRORS.timeout)).toBe(false)
 		expect(uiBusy(undefined)).toBe(false)
+	})
+})
+
+describe('a failure that may still have landed', () => {
+	test('a run that ended cleanly with no row yet, or was killed at its ceiling, is only a doubt', () => {
+		expect(sendMayHaveLanded({ ok: true })).toBe(true)
+		expect(sendMayHaveLanded({ ok: false, error: 'Conductor took too long to respond' })).toBe(true)
+	})
+
+	test('a refusal that stopped before Enter is a failure', () => {
+		expect(sendMayHaveLanded({ ok: false, error: composerHeld })).toBe(false)
+		for (const error of LOCK_ERRORS) expect(sendMayHaveLanded({ ok: false, error }), error).toBe(false)
+		for (const [name, error] of Object.entries(ERRORS)) {
+			// A kill at the ceiling is the one refusal that may come after Enter.
+			if (name !== 'timeout') expect(sendMayHaveLanded({ ok: false, error }), name).toBe(false)
+		}
 	})
 })

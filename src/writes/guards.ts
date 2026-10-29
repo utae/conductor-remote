@@ -54,6 +54,18 @@ export function sendNeverStarted(error: string | undefined): boolean {
 }
 
 /**
+ * Whether a failed run may nonetheless have put the prompt in Conductor: it finished without error but no
+ * row has shown yet (Conductor writes it late when the Mac is starved), or the run was killed at its
+ * ceiling, which can be after Enter. Either way "failed" is not a fact, and the phone must let the chat
+ * settle it instead of leaving a red bubble beside a prompt that arrived.
+ *
+ * Matched on the sentence `osaError` writes for a kill, like the predicates above.
+ */
+export function sendMayHaveLanded(result: { ok: boolean; error?: string }): boolean {
+	return result.ok || (result.error ?? '').startsWith('Conductor took too long to respond')
+}
+
+/**
  * Node's own read of the lock screen — the same CGSessionCopyCurrentDictionary
  * probe `screenLocked()` in src/writes/applescript/window.applescript makes, minus the AppleScript
  * wrapper, so the parked-prompt queue can poll it without spinning up a whole

@@ -111,7 +111,7 @@ export class ApiError extends Error {
 // because the relay retries inside the request (`SEND_BUDGET_MS`, 55s, in
 // src/http/services/delivery.ts) — waiting is cheap here, since the prompt sits in the chat as a
 // "Sending…" bubble rather than blocking the UI.
-const POLL_TIMEOUT_MS = 6000
+const POLL_TIMEOUT_MS = 15000
 
 const ACTION_TIMEOUT_MS = 45000
 

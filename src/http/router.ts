@@ -62,6 +62,11 @@ export function createRelayServer(services: RelayServices) {
 			return json(req, res, 403, { error: 'this device is not allowed to do that' })
 		}
 
+		// A poll whose phone already gave up is not worth answering. After the relay stalls (a starved Mac stalled
+		// it for tens of seconds), the aborted polls queue up behind it, and running every one of their heavy reads
+		// only stretches the stall. Writes are exempt: a send the phone stopped waiting for still lands, by design.
+		if (req.method === 'GET' && (req.socket.destroyed || res.destroyed)) return
+
 		// Who is asking decides who waits for Conductor's window. An agent (src/mcp.ts sets
 		// this header) yields the UI lock to the person holding the phone — see src/writes/ui-lock.ts ▸
 		// uiTurn. Anything unlabelled is treated as the person, because the phone is the

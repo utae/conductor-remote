@@ -57,21 +57,22 @@ function setting(db: Queryable, key: string): unknown {
 	}
 }
 
-/** Model ids the user starred in the desktop picker, per harness: offered even when the catalog gates them. */
-function favoriteIds(db: Queryable): Map<string, Set<string>> {
-	const byHarness = new Map<string, Set<string>>()
+/** The models the user starred in the desktop picker, in the order they ranked them. */
+function favorites(db: Queryable): { agent: string; model: string }[] {
+	const found: { agent: string; model: string }[] = []
 	try {
 		for (const row of db.query<{ configuration: string | null }>(
 			'SELECT configuration FROM favorite_models ORDER BY position LIMIT 50'
 		)) {
 			const parsed = JSON.parse(row.configuration ?? '') as { agent?: unknown; model?: unknown }
-			if (typeof parsed.agent !== 'string' || typeof parsed.model !== 'string') continue
-			byHarness.set(parsed.agent, new Set([...(byHarness.get(parsed.agent) ?? []), parsed.model]))
+			if (typeof parsed.agent === 'string' && typeof parsed.model === 'string') {
+				found.push({ agent: parsed.agent, model: parsed.model })
+			}
 		}
 	} catch {
 		// No favorites table or an unreadable row: the picker rows alone are still a catalog.
 	}
-	return byHarness
+	return found
 }
 
 export function readConductorModelSeed(
@@ -83,7 +84,7 @@ export function readConductorModelSeed(
 		const cache = setting(db, 'model_catalog_cache') as { catalog?: { harnesses?: unknown } } | null
 		const harnesses = cache?.catalog?.harnesses
 		if (!harnesses || typeof harnesses !== 'object') return null
-		const favorites = favoriteIds(db)
+		const starred = favorites(db)
 		const labelById = new Map<string, string>()
 		const groups: CachedModelGroup[] = []
 		for (const [harness, raw] of Object.entries(harnesses as Record<string, { configs?: unknown }>)) {
@@ -95,8 +96,8 @@ export function readConductorModelSeed(
 			for (const model of models) {
 				if (typeof model.id !== 'string' || typeof model.label !== 'string') continue
 				labelById.set(model.id, model.label)
-				const starred = favorites.get(harness)?.has(model.id) === true
-				if (model.status === 'picker' || (starred && model.status !== 'deprecated')) labels.add(model.label)
+				const isStarred = starred.some(favorite => favorite.agent === harness && favorite.model === model.id)
+				if (model.status === 'picker' || (isStarred && model.status !== 'deprecated')) labels.add(model.label)
 			}
 			if (labels.size) {
 				groups.push({
@@ -109,7 +110,10 @@ export function readConductorModelSeed(
 			}
 		}
 		if (!groups.length) return null
-		const defaultId = readDefaultModelId(settingsFile)
+		// What new chats start on is the first model the user ranked, not `[models] default`: that key is only
+		// written by an older settings screen (here it still said `sonnet-5-1m` while every new workspace of the
+		// last days, phone-created ones included, began on `sonnet-5-5-1m`, the first favorite).
+		const defaultId = starred[0]?.model ?? readDefaultModelId(settingsFile)
 		const defaultModel = defaultId ? labelById.get(defaultId) : undefined
 		return { groups, ...(defaultModel ? { defaultModel } : {}) }
 	} catch {

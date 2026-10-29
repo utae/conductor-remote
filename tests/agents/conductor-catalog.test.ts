@@ -89,7 +89,22 @@ describe('the desktop app’s model catalog', () => {
 		])
 	})
 
-	test('the default is the label of the id the user saved as the desktop default', () => {
+	test('the default is the first model the user ranked, ahead of the older `[models] default` key', () => {
+		const stale = settingsFile('[models]\ndefault = "sonnet-5-1m"\n')
+		const seed = readConductorModelSeed(
+			fakeDb({
+				catalog,
+				favorites: [
+					{ type: 'built-in', agent: 'claude', model: 'sonnet-5-5-1m' },
+					{ type: 'built-in', agent: 'codex', model: 'gpt-5.6-sol' }
+				]
+			}),
+			stale
+		)
+		expect(seed?.defaultModel).toBe('Sonnet 5.5')
+	})
+
+	test('without favorites the default is the label of the id in settings.toml', () => {
 		const seed = readConductorModelSeed(fakeDb({ catalog }), settingsFile('[models]\ndefault = "sonnet-5-1m"\n'))
 		expect(seed?.defaultModel).toBe('Sonnet 5 1M')
 		expect(readConductorModelSeed(fakeDb({ catalog }), settingsFile('[git]\n'))?.defaultModel).toBeUndefined()

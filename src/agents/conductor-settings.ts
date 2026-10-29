@@ -80,6 +80,15 @@ export function readDefaultEfforts(file = conductorSettingsPath()): DefaultEffor
 	}
 }
 
+/** The id Conductor uses for a new chat's model (`[models] default`), or null when the user never set one. */
+export function readDefaultModelId(file = conductorSettingsPath()): string | null {
+	try {
+		return readValue(fs.readFileSync(file, 'utf8'), 'models', 'default')
+	} catch {
+		return null
+	}
+}
+
 function replaceValue(source: string, section: string, key: string, value: DefaultEffortLevel): string {
 	const newline = source.includes('\r\n') ? '\r\n' : '\n'
 	const hadTrailingNewline = source.endsWith('\n')

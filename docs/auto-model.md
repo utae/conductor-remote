@@ -4,7 +4,7 @@ Choose **Auto** at the top of the model picker in New workspace or before a chat
 
 The initial router is **5.6 Luna, low effort**. Both exact Muse Spark options are supported: `opencode-go/muse-spark-1.3-contributor` and `opencode/muse-spark-1.3-contributor-free`. They remain separate choices. Router calls use the installed CLIs' authentication, run outside worktrees with tools disabled, and create no Conductor chat. Codex calls are ephemeral; successful OpenCode classifier sessions are deleted afterward.
 
-Until a chat's real picker has been read, the model list comes from the desktop app's own catalog (`model_catalog_cache` in its database) and the default model from `[models] default` in `~/.conductor/settings.toml`; a live picker read replaces the catalog for its harness. The built-in profiles use the catalog's spelling of each model (`GPT-5.6 Luna` for `5.6 Luna`), and a profile whose model that catalog does not offer, such as the OpenCode one, is left out instead of shown as an error.
+Until a chat's real picker has been read, the model list comes from the desktop app's own catalog (`model_catalog_cache` in its database) and the default model from the first model starred in the desktop picker (`favorite_models`), falling back to `[models] default` in `~/.conductor/settings.toml`; a live picker read replaces the catalog for its harness. The built-in profiles use the catalog's spelling of each model (`GPT-5.6 Luna` for `5.6 Luna`), and a profile whose model that catalog does not offer, such as the OpenCode one, is left out instead of shown as an error.
 
 | Profile | Initial model | Tasks |
 | --- | --- | --- |

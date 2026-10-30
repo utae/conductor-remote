@@ -5,6 +5,8 @@ export interface SendResult {
 	strategy: string
 	warning?: string
 	error?: string
+	/** A failure that may still have landed: the phone should let the chat settle it (see `sendMayHaveLanded`). */
+	unsure?: boolean
 }
 
 export interface RunTaskResult {

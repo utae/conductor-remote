@@ -21,7 +21,7 @@ import type { DeliveryCursor, DeliveryReceipt, SessionRow, Workspace } from '../
 import { samePrompt } from '../../shared.ts'
 import { setAgentOptions } from '../../writes/agent-options.ts'
 import { newChat } from '../../writes/chats.ts'
-import { lockBlocked, retryWontHelp, screenLocked, sendNeverStarted } from '../../writes/guards.ts'
+import { lockBlocked, retryWontHelp, screenLocked, sendMayHaveLanded, sendNeverStarted } from '../../writes/guards.ts'
 import type { ChatTab, SendResult } from '../../writes/types.ts'
 import { uiTurn, withUiPriority } from '../../writes/ui-lock.ts'
 import type { BaseServices } from './base.ts'
@@ -250,6 +250,8 @@ export function createDeliveryServices(
 		const deadline = Date.now() + budgetMs
 		let attempts = 0
 		let diagnosed = 0
+		// Any run that may have pressed Enter makes the final answer a doubt, however the last run ended.
+		let mayHaveLanded = false
 		let last: SendResult = { ok: false, strategy: actuator.name }
 		for (;;) {
 			// A persisted delegation cursor can already have a receipt after a restart
@@ -269,6 +271,7 @@ export function createDeliveryServices(
 			// window would be six seconds of watching for nothing. One check still happens:
 			// an *earlier* attempt's row can be arriving, and typing again over that is the
 			// duplicate this whole path exists to avoid.
+			mayHaveLanded ||= sendMayHaveLanded(last)
 			const landed = sendNeverStarted(last.error)
 				? probe()
 				: await confirmDelivery(sessionId, text, before, deadline, probe)
@@ -302,7 +305,7 @@ export function createDeliveryServices(
 			? `Could not confirm the sent message in Conductor${tried}. Check the chat before trying again.`
 			: `${last.error}${tried}`
 		console.warn(`[relay] send to ${label} failed after ${attempts} attempt(s): ${error}`)
-		return { ok: false, strategy: last.strategy, attempts, error }
+		return { ok: false, strategy: last.strategy, attempts, error, ...(mayHaveLanded ? { unsure: true } : {}) }
 	}
 
 	/**

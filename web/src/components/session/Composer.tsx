@@ -503,7 +503,14 @@ export function Composer({
 					{canStop && !canSend ? null : (
 						<button
 							type="button"
-							onClick={() => send()}
+							// A tap on a button moves focus off the textarea, which closes the keyboard and resizes the
+							// viewport under the finger before the click lands, so the first tap only closed the keyboard.
+							// Keep the focus until the click, then close the keyboard ourselves as the send goes out.
+							onMouseDown={e => e.preventDefault()}
+							onClick={() => {
+								send()
+								ref.current?.blur()
+							}}
 							disabled={disabled || !canSend || compacting || !online}
 							aria-label="Send"
 							className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent text-on-solid transition active:scale-95 disabled:bg-surface-2 disabled:text-faint"
